@@ -91,11 +91,54 @@ module DbSucker
 
       def dispatch_stat_tmp cleanup = false
         configful_dispatch(ARGV.shift, ARGV.shift) do |identifier, ctn, variation, var|
-          abort("No identifier given but one is required in order to check it's temp directory!", 1) unless ctn
-          ctn.sftp_start do |sftp|
-            log c "Analyzing temp directory #{c ctn.tmp_path, :magenta}", :green
+          if ctn
+            ctn.sftp_start do |sftp|
+              log c "Analyzing temp directory #{c ctn.tmp_path, :magenta}", :green
+              begin
+                files = sftp.dir.glob("#{ctn.tmp_path}", "**/*")
+              rescue Net::SFTP::StatusException => ex
+                if ex.message["no such file"]
+                  logger.warn "Destination directory `#{ctn.tmp_path}' does not exist on the remote side!"
+                else
+                  raise
+                end
+              end
+
+              managed_files = files.select(&:file?).select{|f| f.name.end_with?(".dbsc", ".dbsc.tmp", ".dbsc.gz") }
+
+              log "Directories: #{c files.select(&:directory?).count, :blue}"
+              log "      Files: #{c files.select(&:file?).count, :blue} #{c "("}#{c managed_files.count, :blue}#{c " managed)"}"
+              log "       Size: #{c human_filesize(files.map{|f| f.attributes.size }.sum), :blue} #{c "("}#{c human_filesize(managed_files.map{|f| f.attributes.size }.sum), :blue} #{c "managed)"}"
+
+              if cleanup
+                if managed_files.any?
+                  log c("WE ONLY SIMULATE! Nothing will be deleted!", :green) if opts[:simulate]
+                  logger.warn "----------- Removing #{managed_files.count} managed files! Press Ctrl-C to abort -----------"
+                  managed_files.each{|f| logger.warn "  REMOVE #{c "#{ctn.tmp_path}/#{f.name}", :magenta} #{c human_filesize(f.attributes.size), :cyan}" }
+                  logger.warn "----------- Removing #{managed_files.count} managed files! Press Ctrl-C to abort -----------"
+                  sleep 3
+                  4.times {|n| log "Cleaning up in #{3 - n}..." ; sleep 1 ; rll }
+
+                  managed_files.each do |f|
+                    fpath = "#{ctn.tmp_path}/#{f.name}"
+
+                    if opts[:simulate]
+                      logger.warn "(simulate)   Removing #{fpath}..."
+                    else
+                      logger.warn "Removing #{fpath}..."
+                      sftp.remove!(fpath)
+                    end
+                  end
+                else
+                  log c("No managed files found, nothing to cleanup.", :green)
+                end
+              end
+            end
+          else
+            tpath = "#{File.expand_path(ENV["DBS_TMPDIR"] || ENV["TMPDIR"] || "/tmp")}/db_sucker_tmp"
+            log c "Analyzing local temp directory #{c tpath, :magenta}", :green
             begin
-              files = sftp.dir.glob("#{ctn.tmp_path}", "**/*")
+              files = Dir.glob("#{tpath}/**/*")
             rescue Net::SFTP::StatusException => ex
               if ex.message["no such file"]
                 logger.warn "Destination directory `#{ctn.tmp_path}' does not exist on the remote side!"
@@ -104,29 +147,27 @@ module DbSucker
               end
             end
 
-            managed_files = files.select(&:file?).select{|f| f.name.end_with?(".dbsc", ".dbsc.tmp", ".dbsc.gz") }
+            managed_files = files.select{|f| File.file?(f) && File.basename(f).end_with?(".dbsc", ".dbsc.tmp", ".dbsc.gz") }
 
-            log "Directories: #{c files.select(&:directory?).count, :blue}"
-            log "      Files: #{c files.select(&:file?).count, :blue} #{c "("}#{c managed_files.count, :blue}#{c " managed)"}"
-            log "       Size: #{c human_filesize(files.map{|f| f.attributes.size }.sum), :blue} #{c "("}#{c human_filesize(managed_files.map{|f| f.attributes.size }.sum), :blue} #{c "managed)"}"
+            log "Directories: #{c files.select{|f| File.directory?(f)}.count, :blue}"
+            log "      Files: #{c files.select{|f| File.file?(f)}.count, :blue} #{c "("}#{c managed_files.count, :blue}#{c " managed)"}"
+            log "       Size: #{c human_filesize(files.map{|f| File.size(f) }.sum), :blue} #{c "("}#{c human_filesize(managed_files.map{|f| File.size(f) }.sum), :blue} #{c "managed)"}"
 
             if cleanup
               if managed_files.any?
                 log c("WE ONLY SIMULATE! Nothing will be deleted!", :green) if opts[:simulate]
                 logger.warn "----------- Removing #{managed_files.count} managed files! Press Ctrl-C to abort -----------"
-                managed_files.each{|f| logger.warn "  REMOVE #{c "#{ctn.tmp_path}/#{f.name}", :magenta} #{c human_filesize(f.attributes.size), :cyan}" }
+                managed_files.each{|f| logger.warn "  REMOVE #{c "#{f}", :magenta} #{c human_filesize(File.size(f)), :cyan}" }
                 logger.warn "----------- Removing #{managed_files.count} managed files! Press Ctrl-C to abort -----------"
                 sleep 3
                 4.times {|n| log "Cleaning up in #{3 - n}..." ; sleep 1 ; rll }
 
                 managed_files.each do |f|
-                  fpath = "#{ctn.tmp_path}/#{f.name}"
-
                   if opts[:simulate]
-                    logger.warn "(simulate)   Removing #{fpath}..."
+                    logger.warn "(simulate)   Removing #{f}..."
                   else
-                    logger.warn "Removing #{fpath}..."
-                    sftp.remove!(fpath)
+                    logger.warn "Removing #{f}..."
+                    File.unlink(f)
                   end
                 end
               else
