@@ -37,7 +37,13 @@ module DbSucker
 
       def ssh_key_files
         @ssh_key_files ||= begin
-          files = [*data["source"]["ssh"]["keyfile"]].reject(&:blank?).map{|f| Pathname.new(File.dirname(src)).join(f) }
+          files = [*data["source"]["ssh"]["keyfile"]].reject(&:blank?).map do |f|
+            if f.start_with?("~")
+              Pathname.new(File.expand_path(f))
+            else
+              Pathname.new(File.dirname(src)).join(f)
+            end
+          end
           files.each do |f|
             begin
               File.open(f)
