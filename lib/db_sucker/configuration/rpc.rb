@@ -45,7 +45,7 @@ module DbSucker
         end
 
         opt = {}
-        opt[:username] = data["source"]["ssh"]["username"] if data["source"]["ssh"]["username"].present?
+        opt[:user] = data["source"]["ssh"]["username"] if data["source"]["ssh"]["username"].present?
         opt[:password] = data["source"]["ssh"]["password"] if data["source"]["ssh"]["password"].present?
         opt[:keys] = ssh_key_files if ssh_key_files.any?
         opt[:port] = data["source"]["ssh"]["port"] if data["source"]["ssh"]["port"].present?
@@ -66,7 +66,7 @@ module DbSucker
         end
 
         opt = {}
-        opt[:username] = data["source"]["ssh"]["username"] if data["source"]["ssh"]["username"].present?
+        opt[:user] = data["source"]["ssh"]["username"] if data["source"]["ssh"]["username"].present?
         opt[:password] = data["source"]["ssh"]["password"] if data["source"]["ssh"]["password"].present?
         opt[:keys] = ssh_key_files if ssh_key_files.any?
         opt[:port] = data["source"]["ssh"]["port"] if data["source"]["ssh"]["port"].present?
