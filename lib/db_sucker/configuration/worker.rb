@@ -2,9 +2,10 @@ module DbSucker
   class Configuration
     class Worker
       include Helpers
-      attr_reader :id, :ctn, :var, :table
+      attr_reader :app, :id, :ctn, :var, :table
 
-      def initialize id, ctn, var, table, deferred = false
+      def initialize app, id, ctn, var, table, deferred = false
+        @app = app
         @id = id
         @ctn = ctn
         @var = var
@@ -272,7 +273,7 @@ module DbSucker
             # = Import file to local server =
             # ===============================
             @status = ["loading file into local SQL server...", :yellow]
-            if File.size(ldfile) > 50_000_000
+            if File.size(ldfile) > 50_000_000 && app.opts[:deferred_import]
               @local_files_to_remove.delete(ldfile)
               $deferred_import << [id, ctn, var, table, ldfile]
               @status = ["Deferring import of large file...", :green]

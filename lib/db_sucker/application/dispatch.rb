@@ -234,7 +234,7 @@ module DbSucker
                 workers = []
                 ttt.each do |tab|
                   debug "Starting worker for table `#{tab}' (#{id})..."
-                  workers << Configuration::Worker.new(id, ctn, var, tab)
+                  workers << Configuration::Worker.new(self, id, ctn, var, tab)
                 end
 
                 # progess display
@@ -256,7 +256,7 @@ module DbSucker
                     # create deferred workers
                     $deferred_import.synchronize do
                       while $deferred_import.any?
-                        w = Configuration::Worker.new(*$deferred_import.shift)
+                        w = Configuration::Worker.new(self, *$deferred_import.shift)
                         workers << w
                         all_workers << w
                       end
