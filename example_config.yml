@@ -1,0 +1,58 @@
+my_identifier:
+  # definition of the remote
+  source:
+    ssh:
+      hostname: my.server.net
+
+      # If left blank use username of current logged in user (SSH default behaviour)
+      username: my_dump_user
+
+      # If you login via password you must declare it here (prompt will break).
+      # Consider using key authentication and leave the password blank.
+      password: my_secret
+
+      # Can be a string or an array of strings.
+      # Can be absolute or relative to the _location of this file_ (or start with ~)
+      # If left blank Net::SSH will attempt to use your ~/.ssh/id_rsa automatically.
+      keyfile: ~/.ssh/id_rsa
+
+      # The remote temp directory to place dumpfiles in. Must be writable by the
+      # SSH user and should be exclusively used for this tool though cleanup only
+      # removes .dbsc files. The directory must exist!
+      tmp_location: /home/my_dump_user/db_sucker_tmp
+
+    # Remote database settings. DON'T limit tables via arguments!
+    hostname: 127.0.0.1
+    username: my_dump_user
+    password: my_secret
+    database: my_database
+    args: --single-transaction # for innoDB
+
+  # define as many variations here as you want.
+  variations:
+    # define your local database settings, args will be passed to the `mysql` command for import.
+    all:
+      database: tomatic
+      hostname: localhost
+      username: root
+      password:
+      args:
+
+    # you can inherit all settings from another variation with the `base` setting.
+    quick:
+      base: all
+      only: [this_table, and_that_table]
+
+    # you can use `only` or `except` to limit the tables you want to suck but not both at the same time.
+    unheavy:
+      base: all
+      except: [orders, order_items, activities]
+
+    # NOT YET IMPLEMENTED
+    # limit data by passing SQL constraints to mysqldump
+    recent_orders:
+      base: all
+      only: [orders, order_items]
+      constraints:
+        orders: "WHERE created_at BETWEEN date_sub(now(), INTERVAL 1 WEEK) and now()"
+        order_items: "WHERE created_at BETWEEN date_sub(now(), INTERVAL 1 WEEK) and now()"

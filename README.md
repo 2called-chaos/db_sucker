@@ -1,102 +1,171 @@
-# DLE
+# DB Sucker
 
-**Directory List Edit – Edit file structures in your favorite editor!**
-You can copy, move, rename, chmod, chown or remove individual files or directories with your favorite text editor.
+**DB Sucker – Sucks DBs as sucking DBs sucks!**
+`db_sucker` is an executable which allows you to "suck"/pull remote MySQL databases to your local server.
+You configure your hosts via an YAML configuration in which you can define multiple variations to add constraints on what to dump (and pull).
 
-**BETA product, use at your own risk, use `--simulate` to be sure, always have a backup!**
+This tool is meant for pulling live data into your development environment. **It is not designed for backups!**
 
-[![YouTube](http://img.youtube.com/vi/-xfnx3VQvNQ/mqdefault.jpg)](https://www.youtube.com/watch?v=-xfnx3VQvNQ)
-**[▶ See it in action](https://www.youtube.com/watch?v=-xfnx3VQvNQ)**
+
+**BETA product, use at your own risk, always have a backup!**
+
+
 
 ## Requirements
 
-You will need a UNIX system with a working Ruby (>= 1.9.3) installation, sorry Windozer!
+Currently `db_sucker` only handles the following constellation:
+
+  - local -> SSH -> MySQL
+
+On the local side you will need:
+  - unixoid OS
+  - Ruby (>= 2)
+  - MySQL client (`mysql` command will be used for importing)
+
+On the remote side you will need:
+  - unixoid OS
+  - SSH access + sftp subsystem (password and/or keyfile)
+  - any folder with write permissions (for the temporary dumps)
+  - mysqldump executable
+
 
 ## Installation
 
 Simple as:
 
-    $ gem install dle
+    $ gem install db_sucker
 
-You may also want to define your favorite editor by setting this enviromental variable (in your profile or bashrc):
+At the moment you are required to adjust the MaxConnections limit on your remote SSH server (from default 10 to around 30).
+Each table requires a connection to download + a few others. See Caveats.
 
-    export DLE_EDITOR="subl -w"
+You will also need at least one configuration, see Configuration.
 
-Note that you need a blocking call to the editor (for GUI editors). Sublime and Textmate both accept `-w` or `--wait`.
 
 ## Usage
 
-To get a list of available options invoke DLE with the `--help` or `-h` option:
+To get a list of available options invoke `db_sucker` with the `--help` or `-h` option:
 
-    Usage: dle [options] base_directory
+    Usage: db_sucker [options] [identifier] [variation]
     # Application options
-        -d, --dotfiles                   Include dotfiles (unix invisible)
-        -r, --skip-review                Skip review changes before applying
-        -s, --simulate                   Don't apply changes, show commands instead
-        -f, --file DLFILE                Use input file (be careful)
-        -o, --only pattern               files, dirs or regexp (without delimiters)
-                                           e.g.: dle ~/Movies -o "(mov|mkv|avi)$"
-        -a, --apply NAMED,FILTERS        Filter collection with saved filters
-        -q, --query                      Filter collection with ruby code
-        -e, --edit FILTER                Edit/create filter scripts
+        -n, --no-deffer                  Don't use deferred import for files > 50 MB SQL data size.
+        -l, --list-databases             List databases for given identifier.
+        -t, --list-tables [DATABASE]     List tables for given identifier and database.
+                                         If used with --list-databases the DATABASE parameter is optional.
+            --stat-tmp                   Show information about the remote temporary directory.
+                                         If no identifier is given check local temp directory instead.
+            --cleanup-tmp                Remove all temporary files from db_sucker in target directory.
+            --simulate                   To use with --cleanup-tmp to not actually remove anything.
 
     # General options
+        -d, --debug                      Debug output
         -m, --monochrome                 Don't colorize output
         -h, --help                       Shows this help
         -v, --version                    Shows version and other info
         -z                               Do not check for updates on GitHub (with -v/--version)
-            --console                    Start console to play around with the collection (requires pry)
+
+    The current config directory is /Users/chaos/.db_sucker
 
 
+## Configuration
+Create a file with a `.yml` extension in your config path. It defaults to `~/.db_sucker` and can be changed
+with the `DBS_CFGDIR` enviromental variable. This is a template configuration you can use:
 
+```
+my_identifier:
+  # definition of the remote
+  source:
+    ssh:
+      hostname: my.server.net
 
-Change into a directory you want to work with and invoke DLE:
+      # If left blank use username of current logged in user (SSH default behaviour)
+      username: my_dump_user
 
-    dle .
-    dle ~/some_path
+      # If you login via password you must declare it here (prompt will break).
+      # Consider using key authentication and leave the password blank.
+      password: my_secret
 
-Your editor will open with a list of your directory structure which you can edit accordingly to these rules:
+      # Can be a string or an array of strings.
+      # Can be absolute or relative to the _location of this file_ (or start with ~)
+      # If left blank Net::SSH will attempt to use your ~/.ssh/id_rsa automatically.
+      keyfile: ~/.ssh/id_rsa
 
-  * If you remove a line we just don't care!
-  * If you add a line we just don't care!
-  * If you change a path we will "mkdir -p" the destination and move the file/dir
-  * If you change the owner we will "chown" the file/dir
-  * If you change the mode we will "chmod" the file/dir
-  * If you change the mode to "cp" and modify the path we will copy instead of moving/renaming
-  * If you change the mode to "del" we will "rm" the file
-  * If you change the mode to "delr" we will "rm" the file or directory
-  * If you change the mode to "delf" or "delrf" we will "rm -f" the file or directory
-  * We will apply changes in this order (inside-out):
-    * Ownership
-    * Permissions
-    * Rename/Move
-    * Copy
-    * Delete
+      # The remote temp directory to place dumpfiles in. Must be writable by the
+      # SSH user and should be exclusively used for this tool though cleanup only
+      # removes .dbsc files. The directory must exist!
+      tmp_location: /home/my_dump_user/db_sucker_tmp
 
+    # Remote database settings. DON'T limit tables via arguments!
+    hostname: 127.0.0.1
+    username: my_dump_user
+    password: my_secret
+    database: my_database
+    args: --single-transaction # for innoDB
 
-### Filters
+  # define as many variations here as you want.
+  variations:
+    # define your local database settings, args will be passed to the `mysql` command for import.
+    all:
+      database: tomatic
+      hostname: localhost
+      username: root
+      password:
+      args:
 
-You can easily filter your movies with Ruby. It's not hard, just look at these examples.
+    # you can inherit all settings from another variation with the `base` setting.
+    quick:
+      base: all
+      only: [this_table, and_that_table]
 
-```ruby
-# Filter by name, for regex see http://rubular.com
-@fs.index.reject! {|inode, node| node.basename =~ /whatever/i }
+    # you can use `only` or `except` to limit the tables you want to suck but not both at the same time.
+    unheavy:
+      base: all
+      except: [orders, order_items, activities]
 
-# Only big files
-@fs.index.select! {|inode, node| node.file? && node.size > 1024 * 1024 * 10 }
-
-# Sort by size
-@fs.index.replace Hash[@fs.index.sort_by{|inode, node| node.size }.reverse]
+    # NOT YET IMPLEMENTED
+    # limit data by passing SQL constraints to mysqldump
+    recent_orders:
+      base: all
+      only: [orders, order_items]
+      constraints:
+        orders: "WHERE created_at BETWEEN date_sub(now(), INTERVAL 1 WEEK) and now()"
+        order_items: "WHERE created_at BETWEEN date_sub(now(), INTERVAL 1 WEEK) and now()"
 ```
 
+## Program workflow
 
-## Caveats
+  1. Establish SSH connection to remote
+  1. Check temporary directory
+  1. *(async)* Invoke `mysqldump` for each table of the target database
+  1. *(async)* Compress each file with gzip
+  1. *(async)* Establish SFTP connection and download file to local temp directory
+  1. *(async)* Uncompress the file on the local side
+  1. *(async)* Import file into database server
 
-DLE relies on inode values, do not use with hardlinks! This may lead to unexpected file operations or data loss!
+
+## Deffered import
+
+Tables with an uncompressed filesize of over 50MB will be queued up for import. Files smaller than 50MB will
+be imported concurrently with other tables. When all those have finished the large ones will import one after
+another. You can skip this behaviour with the `-n` resp. `--no-deffer` option.
+
+
+## Caveats  / Bugs
+
+* Under certain conditions the program might softlock when the remote unexpectedly closes the SSH connection or stops responding to it (bad packet error). The same might happen when the remote denies a new connection (e.g. to many connections). Since the INT signal is trapped you must kill the process. If you did kill it make sure to run the cleanup task to get rid of potentially big dump files.
+  The issue is that I cannot download multiple files over the same connection at the same time. Until I figured it out there are typically
+  2 connections + 1 for each download. With (atm hardcoded) 20 workers you will reach, with one process of db_sucker, 22 connections in the worst case.
+
+
+## Todo
+
+* Download pooling (currently each download requires it's own SSH session due to concurrency problems I was unable to figure out)
+* Attempt to read the max_connections setting from the remote SSH and avoid exceeding it.
+* Better error handling for SSH errors.
+
 
 ## Contributing
 
-1. Fork it ( http://github.com/2called-chaos/dle/fork )
+1. Fork it ( http://github.com/2called-chaos/db_sucker/fork )
 2. Create your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
