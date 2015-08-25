@@ -75,7 +75,7 @@ module DbSucker
     end
 
     def config_dir
-      File.expand_path("~/.db_sucker")
+      File.expand_path(ENV["DBS_CFGDIR"] || "~/.db_sucker")
     end
 
     def config_files

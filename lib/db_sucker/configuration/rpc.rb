@@ -45,15 +45,16 @@ module DbSucker
         end
 
         opt = {}
+        opt[:username] = data["source"]["ssh"]["username"] if data["source"]["ssh"]["username"].present?
         opt[:password] = data["source"]["ssh"]["password"] if data["source"]["ssh"]["password"].present?
         opt[:keys] = ssh_key_files if ssh_key_files.any?
         opt[:port] = data["source"]["ssh"]["port"] if data["source"]["ssh"]["port"].present?
         if block
-          Net::SSH.start(data["source"]["ssh"]["hostname"], data["source"]["ssh"]["username"], opt) do |ssh|
+          Net::SSH.start(data["source"]["ssh"]["hostname"], opt) do |ssh|
             block.call(ssh)
           end
         else
-          Net::SSH.start(data["source"]["ssh"]["hostname"], data["source"]["ssh"]["username"], opt)
+          Net::SSH.start(data["source"]["ssh"]["hostname"], opt)
         end
       end
 
@@ -65,15 +66,16 @@ module DbSucker
         end
 
         opt = {}
+        opt[:username] = data["source"]["ssh"]["username"] if data["source"]["ssh"]["username"].present?
         opt[:password] = data["source"]["ssh"]["password"] if data["source"]["ssh"]["password"].present?
         opt[:keys] = ssh_key_files if ssh_key_files.any?
         opt[:port] = data["source"]["ssh"]["port"] if data["source"]["ssh"]["port"].present?
         if block
-          Net::SFTP.start(data["source"]["ssh"]["hostname"], data["source"]["ssh"]["username"], opt) do |sftp|
+          Net::SFTP.start(data["source"]["ssh"]["hostname"], opt) do |sftp|
             block.call(sftp)
           end
         else
-          Net::SFTP.start(data["source"]["ssh"]["hostname"], data["source"]["ssh"]["username"], opt)
+          Net::SFTP.start(data["source"]["ssh"]["hostname"], opt)
         end
       end
 
