@@ -50,11 +50,11 @@ module DbSucker
         opt[:keys] = ssh_key_files if ssh_key_files.any?
         opt[:port] = data["source"]["ssh"]["port"] if data["source"]["ssh"]["port"].present?
         if block
-          Net::SSH.start(data["source"]["ssh"]["hostname"], opt) do |ssh|
+          Net::SSH.start(data["source"]["ssh"]["hostname"], nil, opt) do |ssh|
             block.call(ssh)
           end
         else
-          Net::SSH.start(data["source"]["ssh"]["hostname"], opt)
+          Net::SSH.start(data["source"]["ssh"]["hostname"], nil, opt)
         end
       end
 
@@ -71,11 +71,11 @@ module DbSucker
         opt[:keys] = ssh_key_files if ssh_key_files.any?
         opt[:port] = data["source"]["ssh"]["port"] if data["source"]["ssh"]["port"].present?
         if block
-          Net::SFTP.start(data["source"]["ssh"]["hostname"], opt) do |sftp|
+          Net::SFTP.start(data["source"]["ssh"]["hostname"], nil, opt) do |sftp|
             block.call(sftp)
           end
         else
-          Net::SFTP.start(data["source"]["ssh"]["hostname"], opt)
+          Net::SFTP.start(data["source"]["ssh"]["hostname"], nil, opt)
         end
       end
 
