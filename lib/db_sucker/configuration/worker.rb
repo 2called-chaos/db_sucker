@@ -56,6 +56,28 @@ module DbSucker
         end
       end
 
+      def sequel_progress channel
+        Thread.new do
+          Thread.current.abort_on_exception = true
+          Thread.current[:iteration] = 0
+          loop do
+            if instance = channel[:importer]
+              instance.abort rescue false if Thread.main[:shutdown]
+              if instance.closing?
+                @status = ["[CLOSING] #{instance.progress}", :red]
+              else
+                @status = [instance.progress, :yellow]
+              end
+              break unless instance.active?
+            else
+              @status = ["initializing sequel importer...", :yellow]
+            end
+            sleep 1
+            Thread.current[:iteration] += 1
+          end
+        end
+      end
+
       def may_interrupt
         stat = @status[0].to_s.gsub("[CLOSING]", "").strip
         @status = ["[CLOSED] #{stat}", :black]
@@ -244,14 +266,25 @@ module DbSucker
           @status = ["Deferring import of large file (#{human_filesize(File.size(@ldfile))})...", :green]
           sleep 3
         else
-          $importing.synchronize { $importing << self }
-          channel = var.load_local_file(@ldfile)
-          second_progress(channel, "loading file (#{human_filesize(File.size(@ldfile))}) into local SQL server (:seconds)...").join
-          $importing.synchronize { $importing.delete(self) }
+          _do_import_file(@ldfile)
         end
       end
 
+      def _do_import_file(file, deferred = false)
+        $importing.synchronize { $importing << self }
+        var.load_local_file(self, file) do |importer, channel|
+          case importer
+            when "sequel" then sequel_progress(channel).join
+            else second_progress(channel, "#{"(deferred) " if deferred}loading file (#{human_filesize(File.size(file))}) into local SQL server (:seconds)...").join
+          end
+        end
+      ensure
+        $importing.synchronize { $importing.delete(self) }
+      end
+
       def _deferred_import
+        @local_files_to_remove << @deferred
+
         # ==================================
         # = Wait for other workers to exit =
         # ==================================
@@ -281,13 +314,7 @@ module DbSucker
           # = Import file to local server =
           # ===============================
           @status = ["(deferred) loading file into local SQL server...", :yellow]
-          @local_files_to_remove << @deferred
-
-          $importing.synchronize { $importing << self }
-          channel = var.load_local_file(@deferred)
-          second_progress(channel, "(deferred) loading file (#{human_filesize(File.size(@deferred))}) into local SQL server (:seconds)...").join
-          $importing.synchronize { $importing.delete(self) }
-          may_interrupt
+          _do_import_file(@deferred, true)
         end
       end
     end

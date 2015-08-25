@@ -29,7 +29,7 @@ module DbSucker
 
         if data["variations"]
           data["variations"].each do |name, vd|
-            vd.assert_valid_keys %w[label base database hostname username password args incremental file gzip only except]
+            vd.assert_valid_keys %w[label base database hostname username password args incremental file gzip only except importer]
             raise "A variation `#{name}' can only define either a `only' or `except' option in #{src}" if vd["only"] && vd["except"]
           end
         end
