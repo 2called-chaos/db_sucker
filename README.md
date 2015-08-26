@@ -1,6 +1,7 @@
 # DB Sucker
 
 **DB Sucker – Sucks DBs as sucking DBs sucks!**
+
 `db_sucker` is an executable which allows you to "suck"/pull remote MySQL databases to your local server.
 You configure your hosts via an YAML configuration in which you can define multiple variations to add constraints on what to dump (and pull).
 
@@ -147,6 +148,28 @@ my_identifier:
 Tables with an uncompressed filesize of over 50MB will be queued up for import. Files smaller than 50MB will
 be imported concurrently with other tables. When all those have finished the large ones will import one after
 another. You can skip this behaviour with the `-n` resp. `--no-deffer` option.
+
+
+## Importer
+
+Currently there are two (well three) importers to choose from.
+
+* **void10** Used for development/testing. Sleeps for 10 seconds and then exit.
+* **default** Default import using `mysql` executable
+* **dirty** Same as default but the dump will get wrapped:
+  ```
+    (
+      echo "SET AUTOCOMMIT=0;"
+      echo "SET UNIQUE_CHECKS=0;"
+      echo "SET FOREIGN_KEY_CHECKS=0;"
+      cat dumpfile.sql
+      echo "SET FOREIGN_KEY_CHECKS=1;"
+      echo "SET UNIQUE_CHECKS=1;"
+      echo "SET AUTOCOMMIT=1;"
+      echo "COMMIT;"
+    ) | mysql -u... -p... target_database
+  ```
+  **The wrapper will only be used on deferred imports (since it alters global MySQL sever variables)!**
 
 
 ## Caveats  / Bugs
