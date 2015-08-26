@@ -53,16 +53,32 @@ module DbSucker
         end.join(" ")
       end
 
-      def load_command_for file
-        [].tap do |r|
+      def load_command_for file, dirty = false
+        base = [].tap do |r|
           r << "mysql"
           r << "-h#{data["hostname"]}" unless data["hostname"].blank?
           r << "-u#{data["username"]}" unless data["username"].blank?
           r << "-p#{data["password"]}" unless data["password"].blank?
           r << data["database"]
           r << "#{data["args"]}"
-          r << " < #{file}"
         end.join(" ")
+
+        if dirty
+          %{
+            (
+              echo "SET AUTOCOMMIT=0;"
+              echo "SET UNIQUE_CHECKS=0;"
+              echo "SET FOREIGN_KEY_CHECKS=0;"
+              cat #{file}
+              echo "SET FOREIGN_KEY_CHECKS=1;"
+              echo "SET UNIQUE_CHECKS=1;"
+              echo "SET AUTOCOMMIT=1;"
+              echo "COMMIT;"
+            ) | #{base}
+          }
+        else
+          "#{base} < #{file}"
+        end
       end
 
       def dump_to_remote worker, blocking = true
@@ -124,7 +140,7 @@ module DbSucker
         #     imp.start
         #   }
         else
-          t = channelfy_thread Thread.new{ system("#{load_command_for file}") }
+          t = channelfy_thread Thread.new{ system("#{load_command_for file, data["importer"] == "dirty" && worker.deferred}") }
         end
 
         block.call(data["importer"], t)

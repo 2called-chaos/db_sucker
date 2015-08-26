@@ -2,7 +2,7 @@ module DbSucker
   class Configuration
     class Worker
       include Helpers
-      attr_reader :app, :id, :ctn, :var, :table
+      attr_reader :app, :id, :ctn, :var, :table, :deferred
 
       def initialize app, id, ctn, var, table, deferred = false
         @app = app
