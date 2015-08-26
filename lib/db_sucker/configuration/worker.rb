@@ -240,14 +240,20 @@ module DbSucker
             retry
           end
         end
+
+        dpd.join
       end
 
-      def _copy_file
-        # @status = ["copying file to backup path...", :yellow]
-        # bfile, cr = var.copy_file(lfile, false)
-        # channel, result = cr
-        # second_progress(channel, "copying file to backup path (:seconds)...").join
-        # @files_to_remove.delete(ffile)
+      def _copy_file file = nil
+        if var.data["file"]
+          if !var.data["gzip"] && !@delay_copy_file
+            @delay_copy_file = true
+            return
+          end
+          @status = ["copying file to target path...", :yellow]
+          bfile, channel = var.copy_file(self, file || @lfile)
+          second_progress(channel, "copying file to backup path (:seconds)...").join
+        end
       end
 
       def _decompress_file
@@ -256,17 +262,20 @@ module DbSucker
         @local_files_to_remove << @ldfile
         second_progress(channel, "decompressing file (:seconds)...").join
         @local_files_to_remove.delete(@lfile)
+        _copy_file(@ldfile) if @delay_copy_file
       end
 
       def _import_file
-        @status = ["loading file into local SQL server...", :yellow]
-        if File.size(@ldfile) > 50_000_000 && app.opts[:deferred_import]
-          @local_files_to_remove.delete(@ldfile)
-          $deferred_import << [id, ctn, var, table, @ldfile]
-          @status = ["Deferring import of large file (#{human_filesize(File.size(@ldfile))})...", :green]
-          sleep 3
-        else
-          _do_import_file(@ldfile)
+        if var.data["database"]
+          @status = ["loading file into local SQL server...", :yellow]
+          if File.size(@ldfile) > 50_000_000 && app.opts[:deferred_import]
+            @local_files_to_remove.delete(@ldfile)
+            $deferred_import << [id, ctn, var, table, @ldfile]
+            @status = ["Deferring import of large file (#{human_filesize(File.size(@ldfile))})...", :green]
+            sleep 3
+          else
+            _do_import_file(@ldfile)
+          end
         end
       end
 
