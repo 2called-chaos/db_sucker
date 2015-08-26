@@ -38,7 +38,6 @@ module DbSucker
 
       def second_progress channel, status, color = :yellow, is_thread = false, initial = 0
         Thread.new do
-          Thread.current.abort_on_exception = true
           Thread.current[:iteration] = initial
           loop do
             channel.close rescue false if Thread.main[:shutdown]
@@ -58,7 +57,6 @@ module DbSucker
 
       def sequel_progress channel
         Thread.new do
-          Thread.current.abort_on_exception = true
           Thread.current[:iteration] = 0
           loop do
             if instance = channel[:importer]
@@ -177,7 +175,6 @@ module DbSucker
 
         # download progress display
         dpd = Thread.new do
-          Thread.current.abort_on_exception = true
           Thread.current[:iteration] = 0
           loop do
             unless Thread.current[:suspended]

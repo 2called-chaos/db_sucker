@@ -5,6 +5,8 @@ module DbSucker
     MAIN_THREAD[:app_logger] ||= Banana::Logger.new.tap{|l| l.disable(:debug) }
   end
 
+  Thread.abort_on_exception = true
+
   class Application
     attr_reader :opts, :cfg
     include Dispatch
