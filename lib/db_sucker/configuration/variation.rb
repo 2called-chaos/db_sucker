@@ -118,11 +118,11 @@ module DbSucker
       def load_local_file worker, file, &block
         if data["importer"] == "void10"
           t = channelfy_thread Thread.new{ sleep 10 }
-        elsif data["importer"] == "sequel"
-          t = channelfy_thread Thread.new {
-            Thread.current[:importer] = imp = SequelImporter.new(worker, file)
-            imp.start
-          }
+        # elsif data["importer"] == "sequel"
+        #   t = channelfy_thread Thread.new {
+        #     Thread.current[:importer] = imp = SequelImporter.new(worker, file)
+        #     imp.start
+        #   }
         else
           t = channelfy_thread Thread.new{ system("#{load_command_for file}") }
         end

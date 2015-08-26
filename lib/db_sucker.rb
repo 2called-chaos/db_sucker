@@ -22,7 +22,6 @@ require "db_sucker/configuration/rpc"
 require "db_sucker/configuration/container"
 require "db_sucker/configuration/variation"
 require "db_sucker/configuration"
-require "db_sucker/sequel_importer"
 require "db_sucker/application/dispatch"
 require "db_sucker/application"
 

@@ -55,26 +55,29 @@ module DbSucker
         end
       end
 
-      def sequel_progress channel
-        Thread.new do
-          Thread.current[:iteration] = 0
-          loop do
-            if instance = channel[:importer]
-              instance.abort rescue false if Thread.main[:shutdown]
-              if instance.closing?
-                @status = ["[CLOSING] #{instance.progress}", :red]
-              else
-                @status = [instance.progress, :yellow]
-              end
-              break unless instance.active?
-            else
-              @status = ["initializing sequel importer...", :yellow]
-            end
-            sleep 1
-            Thread.current[:iteration] += 1
-          end
-        end
-      end
+      # def sequel_progress channel
+      #   Thread.new do
+      #     Thread.current[:iteration] = 0
+      #     loop do
+      #       if instance = channel[:importer]
+      #         instance.abort rescue false if Thread.main[:shutdown]
+      #         if instance.closing?
+      #           @status = ["[CLOSING] #{instance.progress}", :red]
+      #         else
+      #           @status = instance.progress
+      #         end
+      #         unless instance.active?
+      #           sleep 5 if instance.error
+      #           break
+      #         end
+      #       else
+      #         @status = ["initializing sequel importer...", :yellow]
+      #       end
+      #       sleep 1
+      #       Thread.current[:iteration] += 1
+      #     end
+      #   end
+      # end
 
       def may_interrupt
         stat = @status[0].to_s.gsub("[CLOSING]", "").strip
@@ -271,7 +274,12 @@ module DbSucker
         $importing.synchronize { $importing << self }
         var.load_local_file(self, file) do |importer, channel|
           case importer
-            when "sequel" then sequel_progress(channel).join
+            # when "sequel"
+            #   sequel_progress(channel).join
+            #   if channel[:importer].error
+            #     @status = ["importing with Sequel", :yellow]
+            #     raise channel[:importer].error
+            #   end
             else second_progress(channel, "#{"(deferred) " if deferred}loading file (#{human_filesize(File.size(file))}) into local SQL server (:seconds)...").join
           end
         end
