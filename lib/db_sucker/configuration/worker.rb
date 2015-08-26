@@ -283,7 +283,7 @@ module DbSucker
         $importing.synchronize { $importing << self }
         var.load_local_file(self, file) do |importer, channel|
           case importer
-            # when "sequel"
+            when "sequel"
             #   sequel_progress(channel).join
             #   if channel[:importer].error
             #     @status = ["importing with Sequel", :yellow]
