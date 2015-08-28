@@ -141,7 +141,16 @@ module DbSucker
         #     imp.start
         #   }
         else
-          t = channelfy_thread Thread.new{ system("#{load_command_for file, data["importer"] == "dirty" && worker.deferred}") }
+          t = channelfy_thread Thread.new{
+            cmd = load_command_for(file, data["importer"] == "dirty" && worker.deferred)
+            Open3.popen2e(cmd, pgroup: true) do |_ipc_stdin, _ipc_stdouterr, _ipc_thread|
+              outerr, exit_status = _ipc_stdouterr.read, _ipc_thread.value
+              if exit_status != 0
+                Thread.current[:error_message] = outerr.strip
+                sleep 3
+              end
+            end
+          }
         end
 
         block.call(data["importer"], t)

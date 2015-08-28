@@ -43,7 +43,9 @@ module DbSucker
             channel.close rescue false if Thread.main[:shutdown]
             stat = status.gsub(":seconds", human_seconds(Thread.current[:iteration]))
             stat = stat.gsub(":workers", channel[:workers].to_s.presence || "?") if is_thread
-            if channel.closing?
+            if channel[:error_message]
+              @status = ["[IMPORT] #{channel[:error_message]}", :red]
+            elsif channel.closing?
               @status = ["[CLOSING] #{stat}", :red]
             else
               @status = [stat, color]
@@ -106,12 +108,15 @@ module DbSucker
           begin
             may_interrupt
 
-            perform.each do |m|
-              send(:"_#{m}")
-              may_interrupt
+            catch :abort_execution do
+              perform.each do |m|
+                send(:"_#{m}")
+                may_interrupt
+              end
+
+              @status = ["DONE#{" – deferred" if @got_deferred}", :green]
             end
 
-            @status = ["DONE", :green]
             sleep 1
           rescue StandardError => ex
             @status = ["ERROR (#{ex.class}): #{ex.message} (was #{@status[0]})", :red]
@@ -272,6 +277,7 @@ module DbSucker
             @local_files_to_remove.delete(@ldfile)
             $deferred_import << [id, ctn, var, table, @ldfile]
             @status = ["Deferring import of large file (#{human_filesize(File.size(@ldfile))})...", :green]
+            @got_deferred = true
             sleep 3
           else
             _do_import_file(@ldfile)
@@ -291,6 +297,7 @@ module DbSucker
             #   end
             else second_progress(channel, "#{"(deferred) " if deferred}loading file (#{human_filesize(File.size(file))}) into local SQL server (:seconds)...").join
           end
+          throw :abort_execution, channel[:error_message] if channel[:error_message]
         end
       ensure
         $importing.synchronize { $importing.delete(self) }
