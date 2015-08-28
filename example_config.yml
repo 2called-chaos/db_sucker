@@ -44,9 +44,12 @@ my_identifier:
       only: [this_table, and_that_table]
 
     # you can use `only` or `except` to limit the tables you want to suck but not both at the same time.
+    # there is also an option `ignore_always` for tables which you never want to pull (intended for base variation)
+    # so that you don't need to repeat them in your except statements (which overwrites, no merge here)
     unheavy:
       base: all
       except: [orders, order_items, activities]
+      ignore_always: [schema_migrations]
 
     # You can also copy the downloaded files to a separate directory (this is not a backup!)
     # - If database is also given perform both operations.

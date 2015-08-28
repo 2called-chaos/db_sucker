@@ -37,6 +37,7 @@ module DbSucker
         else
           keep = all
         end
+        keep -= data["ignore_always"] if data["ignore_always"].is_a?(Array)
 
         keep
       end
