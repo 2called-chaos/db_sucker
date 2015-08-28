@@ -60,7 +60,7 @@ my_identifier:
     #    :id         981f8e2f278fa7f029399996b02e869ed8fd7709
     with_copy:
       base: all
-      file: /Users/chaos/Desktop/:date_:id_:table.sql.gz
+      file: ~/Desktop/:date_:id_:table.sql.gz
       gzip: true
 
     # only save files, don't import
