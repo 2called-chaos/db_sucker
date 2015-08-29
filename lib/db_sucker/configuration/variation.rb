@@ -169,7 +169,7 @@ module DbSucker
         bfile = "#{bfile}.gz" if data["gzip"] && !bfile.end_with?(".gz")
         bfile = bfile[0..-4] if !data["gzip"] && bfile.end_with?(".gz")
         t = Thread.new{
-          FileUtils.mkdir_p(File.basename(bfile))
+          FileUtils.mkdir_p(File.dirname(bfile))
           FileUtils.copy_file(srcfile, bfile)
         }
         [bfile, channelfy_thread(t)]
