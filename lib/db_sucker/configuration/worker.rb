@@ -156,6 +156,14 @@ module DbSucker
         @ffile = @rfile[0..-5]
         channel, result = cr
         second_progress(channel, "dumping table to remote file (:seconds)...").join
+
+        if result.any?
+          r = result.join
+          if m = r.match(/(Unknown column '(.+)') in .+ \(([0-9]+)\)/i)
+            @status = ["[DUMP] Failed: #{m[1]} (#{m[3]})", :red]
+            throw :abort_execution
+          end
+        end
       end
 
       def _rename_file
