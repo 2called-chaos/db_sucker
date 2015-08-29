@@ -125,6 +125,7 @@ module DbSucker
               @status = ["ERROR #{ex.backtrace[i]}", :red]
             end
             sleep 5
+            @status = ["ERROR (#{ex.class}): #{ex.message} (was #{@status[0]})", :red]
           ensure
             # cleanup temp files
             ctn.sftp_start do |sftp|
