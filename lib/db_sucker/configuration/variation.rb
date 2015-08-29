@@ -171,9 +171,9 @@ module DbSucker
         d, dt = Time.current.strftime("%Y-%m-%d"), Time.current.strftime("%H-%M-%S")
         bfile = data["file"]
         bfile = bfile.gsub(":combined", ":datetime_-_:table")
+        bfile = bfile.gsub(":datetime", "#{d}_#{dt}")
         bfile = bfile.gsub(":date", d)
         bfile = bfile.gsub(":time", dt)
-        bfile = bfile.gsub(":datetime", "#{d}_#{dt}")
         bfile = bfile.gsub(":table", worker.table)
         bfile = bfile.gsub(":id", worker.id)
         bfile = File.expand_path(bfile)
