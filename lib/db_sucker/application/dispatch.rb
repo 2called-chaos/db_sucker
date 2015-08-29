@@ -89,7 +89,7 @@ module DbSucker
         ctn.try(:ssh_end)
       end
 
-      def _dispatch_stat_tmp_display files, directories, managed, cleanup = false
+      def _dispatch_stat_tmp_display files, directories, managed, cleanup = false, sftp = false
         log "Directories: #{c directories.count, :blue}"
         log "      Files: #{c files.count, :blue} #{c "("}#{c managed.count, :blue}#{c " managed)"}"
         log "       Size: #{c human_filesize(files.map(&:second).sum), :blue} #{c "("}#{c human_filesize(managed.map(&:second).sum), :blue} #{c "managed)"}"
@@ -108,7 +108,7 @@ module DbSucker
                 logger.warn "(simulate)   Removing #{f}..."
               else
                 logger.warn "Removing #{f}..."
-                sftp.remove!(f)
+                sftp ? sftp.remove!(f) : File.unlink(f)
               end
             end
           else
@@ -136,7 +136,7 @@ module DbSucker
               d_files = files.select(&:file?).map{|f| ["#{ctn.tmp_path}/#{f.name}", f.attributes.size] }
               d_directories = files.select(&:directory?).map{|f| ["#{ctn.tmp_path}/#{f.name}"] }
               d_managed = files.select(&:file?).select{|f| f.name.end_with?(".dbsc", ".dbsc.tmp", ".dbsc.gz") }.map{|f| ["#{ctn.tmp_path}/#{f.name}", f.attributes.size] }
-              _dispatch_stat_tmp_display(d_files, d_directories, d_managed, cleanup)
+              _dispatch_stat_tmp_display(d_files, d_directories, d_managed, cleanup, sftp)
             end
           else
             tpath = "#{File.expand_path(ENV["DBS_TMPDIR"] || ENV["TMPDIR"] || "/tmp")}/db_sucker_tmp"
