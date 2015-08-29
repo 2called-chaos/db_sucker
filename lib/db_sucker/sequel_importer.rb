@@ -3,7 +3,7 @@ module DbSucker
     include Helpers
     include Application::LoggerClient
     BUFFER_SIZE = 1000
-    POOL_SIZE   = 6
+    POOL_SIZE   = 4
     attr_reader :worker, :file, :started, :status, :error
 
     def initialize(worker, file, opt = {})
@@ -47,12 +47,17 @@ module DbSucker
     rescue StandardError => ex
       @error = ex
     ensure
+      close_db_connection
       @active = false
     end
 
     def establish_db_connection
       @db = Sequel.connect(dsn, max_connections: POOL_SIZE)
       @db.run("SELECT version()")
+    end
+
+    def close_db_connection
+      @db.try(:disconnect) rescue false
     end
 
     def spool_file_to_buf
@@ -73,7 +78,7 @@ module DbSucker
             @icond.wait_until { @unprocessed < BUFFER_SIZE }
           end
         end
-        @buf.synchronize { @pcond.signal }
+        @buf.synchronize { @pcond.signal ; @econd.signal }
       end
     end
 
@@ -129,9 +134,10 @@ module DbSucker
     def wait_for_exit
       @buf.synchronize {
         @econd.wait_until { @closing || @unprocessed.zero? }
-        @pcond.signal
       }
+      t = Thread.new { loop { @buf.synchronize { @pcond.signal } ; sleep 1 }}
       @workers.each(&:join)
+      t.kill
     end
 
     def abort
@@ -169,7 +175,7 @@ module DbSucker
     end
 
     def pstat
-      "#{c @stat[:succeeded], :green}#{c "/"}#{c @stat[:failed], :red}#{c "/"}#{c @stat[:executed], :white}"
+      "#{c @stat[:executed], :white}#{c "/"}#{c @stat[:succeeded], :green}#{c "/"}#{c @stat[:failed], :red}"
     end
 
     def runtime
