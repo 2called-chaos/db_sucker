@@ -159,6 +159,7 @@ module DbSucker
       def copy_file worker, srcfile
         d, dt = Time.current.strftime("%Y-%m-%d"), Time.current.strftime("%H-%M-%S")
         bfile = data["file"]
+        bfile = bfile.gsub(":combined", ":datetime_-_:table")
         bfile = bfile.gsub(":date", d)
         bfile = bfile.gsub(":time", dt)
         bfile = bfile.gsub(":datetime", "#{d}_#{dt}")

@@ -61,6 +61,7 @@ my_identifier:
     #    :datetime   2015-08-26_14-05-54
     #    :table      my_table
     #    :id         981f8e2f278fa7f029399996b02e869ed8fd7709
+    #    :combined   :datetime_-_:table
     with_copy:
       base: all
       file: ~/Desktop/:date_:id_:table.sql.gz
