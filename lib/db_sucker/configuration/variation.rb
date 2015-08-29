@@ -43,7 +43,7 @@ module DbSucker
       end
 
       def constraint table
-        data["constraints"] && data["constraints"][table]
+        data["constraints"] && (data["constraints"][table] || data["constraints"]["__default"])
       end
 
       def dump_command_for table

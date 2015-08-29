@@ -80,7 +80,6 @@ my_identifier:
       base: all
       importer: dirty
 
-    # NOT YET IMPLEMENTED
     # limit data by passing SQL constraints to mysqldump
     recent_orders:
       base: all
@@ -89,3 +88,5 @@ my_identifier:
         last_week: &last_week "created_at > date_sub(now(), INTERVAL 7 DAY)"
         orders: *last_week
         order_items: *last_week
+        # you can use the following to apply a query to all tables which get dumped:
+        __default: *last_week
