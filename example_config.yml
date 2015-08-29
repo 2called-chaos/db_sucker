@@ -86,5 +86,6 @@ my_identifier:
       base: all
       only: [orders, order_items]
       constraints:
-        orders: "WHERE created_at BETWEEN date_sub(now(), INTERVAL 1 WEEK) and now()"
-        order_items: "WHERE created_at BETWEEN date_sub(now(), INTERVAL 1 WEEK) and now()"
+        last_week: &last_week "created_at > date_sub(now(), INTERVAL 7 DAY)"
+        orders: *last_week
+        order_items: *last_week

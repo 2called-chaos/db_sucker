@@ -42,14 +42,22 @@ module DbSucker
         keep
       end
 
-      def dump_command_for tables
+      def constraint table
+        data["constraints"] && data["constraints"][table]
+      end
+
+      def dump_command_for table
         [].tap do |r|
           r << "mysqldump"
           r << "-h#{cfg.data["source"]["hostname"]}" unless cfg.data["source"]["hostname"].blank?
           r << "-u#{cfg.data["source"]["username"]}" unless cfg.data["source"]["username"].blank?
           r << "-p#{cfg.data["source"]["password"]}" unless cfg.data["source"]["password"].blank?
+          if c = constraint(table)
+            r << "--compact --skip-extended-insert --no-create-info --complete-insert"
+            r << Shellwords.escape("-w#{c}")
+          end
           r << cfg.data["source"]["database"]
-          r << tables.join(" ")
+          r << table
           r << "#{cfg.data["source"]["args"]}"
         end.join(" ")
       end
@@ -83,7 +91,7 @@ module DbSucker
       end
 
       def dump_to_remote worker, blocking = true
-        cmd = dump_command_for([worker.table])
+        cmd = dump_command_for(worker.table)
         cmd << " > #{worker.tmp_filename(true)}"
         [worker.tmp_filename(true), cfg.blocking_channel_result(cmd, channel: true, blocking: blocking)]
       end
@@ -133,16 +141,19 @@ module DbSucker
       end
 
       def load_local_file worker, file, &block
-        if data["importer"] == "void10"
+        imp = data["importer"]
+        if imp == "void10"
           t = channelfy_thread Thread.new{ sleep 10 }
-        # elsif data["importer"] == "sequel"
-        #   t = channelfy_thread Thread.new {
-        #     Thread.current[:importer] = imp = SequelImporter.new(worker, file)
-        #     imp.start
-        #   }
+        elsif imp == "sequel" || constraint(worker.table)
+          imp_was_sequel = imp == "sequel"
+          imp = "sequel"
+          t = channelfy_thread Thread.new {
+            Thread.current[:importer] = imp = SequelImporter.new(worker, file, ignore_errors: !imp_was_sequel)
+            imp.start
+          }
         else
           t = channelfy_thread Thread.new{
-            cmd = load_command_for(file, data["importer"] == "dirty" && worker.deferred)
+            cmd = load_command_for(file, imp == "dirty" && worker.deferred)
             Open3.popen2e(cmd, pgroup: true) do |_ipc_stdin, _ipc_stdouterr, _ipc_thread|
               outerr, exit_status = _ipc_stdouterr.read, _ipc_thread.value
               if exit_status != 0
@@ -153,7 +164,7 @@ module DbSucker
           }
         end
 
-        block.call(data["importer"], t)
+        block.call(imp, t)
       end
 
       def copy_file worker, srcfile
@@ -181,31 +192,3 @@ module DbSucker
     end
   end
 end
-
-__END__
-
-# ==================
-# = SOURCE OPTIONS =
-# ==================
-X> base: default
-X> incremental:
-     this_table: column_name # usually ID
-X> only: [orders, order_items]
-X> except: [orders, order_items]
-
-
-# ======
-# = DB =
-# ======
-X> database: DATABASE_NAME
-X> hostname: localhost
-X> username: root
-X> password: SECRET
-X> args:
-
-
-# ========
-# = FILE =
-# ========
-~> file: /home/backup/database-%Y-%m-%d.sql
-~> gzip: yes

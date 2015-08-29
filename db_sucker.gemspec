@@ -24,4 +24,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency "pry", "~> 0.10"
   spec.add_dependency "net-ssh", "~> 2.9"
   spec.add_dependency "net-sftp", "~> 2.1"
+  spec.add_dependency "mysql2", "~> 0.3"
+  spec.add_dependency "sequel", "~> 4.25"
 end

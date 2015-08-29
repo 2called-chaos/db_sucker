@@ -57,29 +57,29 @@ module DbSucker
         end
       end
 
-      # def sequel_progress channel
-      #   Thread.new do
-      #     Thread.current[:iteration] = 0
-      #     loop do
-      #       if instance = channel[:importer]
-      #         instance.abort rescue false if Thread.main[:shutdown]
-      #         if instance.closing?
-      #           @status = ["[CLOSING] #{instance.progress}", :red]
-      #         else
-      #           @status = instance.progress
-      #         end
-      #         unless instance.active?
-      #           sleep 5 if instance.error
-      #           break
-      #         end
-      #       else
-      #         @status = ["initializing sequel importer...", :yellow]
-      #       end
-      #       sleep 1
-      #       Thread.current[:iteration] += 1
-      #     end
-      #   end
-      # end
+      def sequel_progress channel
+        Thread.new do
+          Thread.current[:iteration] = 0
+          loop do
+            if instance = channel[:importer]
+              instance.abort rescue false if Thread.main[:shutdown]
+              if instance.closing?
+                @status = ["[CLOSING] #{instance.progress[0]}", :red]
+              else
+                @status = instance.progress
+              end
+              unless instance.active?
+                sleep 5 if instance.error
+                break
+              end
+            else
+              @status = ["initializing sequel importer...", :yellow]
+            end
+            sleep 1
+            Thread.current[:iteration] += 1
+          end
+        end
+      end
 
       def may_interrupt
         stat = @status[0].to_s.gsub("[CLOSING]", "").strip
@@ -114,12 +114,16 @@ module DbSucker
                 may_interrupt
               end
 
-              @status = ["DONE#{" – deferred" if @got_deferred}", :green]
+              @status = ["DONE#{" – deferred" if @got_deferred}#{" #{@return_message}" if @return_message}", :green]
             end
 
             sleep 1
           rescue StandardError => ex
             @status = ["ERROR (#{ex.class}): #{ex.message} (was #{@status[0]})", :red]
+            1.times do |i|
+              sleep 3
+              @status = ["ERROR #{ex.backtrace[i]}", :red]
+            end
             sleep 5
           ensure
             # cleanup temp files
@@ -290,14 +294,15 @@ module DbSucker
         var.load_local_file(self, file) do |importer, channel|
           case importer
             when "sequel"
-            #   sequel_progress(channel).join
-            #   if channel[:importer].error
-            #     @status = ["importing with Sequel", :yellow]
-            #     raise channel[:importer].error
-            #   end
+              sequel_progress(channel).join
+              if channel[:importer].error
+                @status = ["importing with Sequel", :yellow]
+                raise channel[:importer].error
+              end
             else second_progress(channel, "#{"(deferred) " if deferred}loading file (#{human_filesize(File.size(file))}) into local SQL server (:seconds)...").join
           end
           throw :abort_execution, channel[:error_message] if channel[:error_message]
+          @return_message = channel[:return_message] if channel[:return_message]
         end
       ensure
         $importing.synchronize { $importing.delete(self) }
