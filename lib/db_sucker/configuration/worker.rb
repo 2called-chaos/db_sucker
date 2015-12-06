@@ -155,6 +155,7 @@ module DbSucker
         @files_to_remove << @rfile
         @ffile = @rfile[0..-5]
         channel, result = cr
+        channel[:error_message] = result.inspect
         second_progress(channel, "dumping table to remote file (:seconds)...").join
 
         if result.any?
