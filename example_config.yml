@@ -81,6 +81,13 @@ my_identifier:
       importer: dirty
 
     # limit data by passing SQL constraints to mysqldump
+    # WARNING:
+    #   If a constraint is in effect...
+    #     - mysqldump options get added `--compact --skip-extended-insert --no-create-info --complete-insert'
+    #     - your local table will not get removed! Only data will get pulled.
+    #     - you can have different columns as long as all remote columns exist locally
+    #     - import will be performed by a ruby implementation (using Sequel)
+    #     - import will ignore records that violate indices (or duplicate IDs)
     recent_orders:
       base: all
       only: [orders, order_items]
@@ -90,3 +97,21 @@ my_identifier:
         order_items: *last_week
         # you can use the following to apply a query to all tables which get dumped:
         __default: *last_week
+
+    # NOT YET IMPLEMENTED!
+    # pseudo-incremental update function:
+    # If you want to pull latest data you can either use constraints like above or use this dirty feature
+    # to make it even more efficient. It will lookup the highest value of a given column per table and only
+    # pulls data with a value greater than that. Typically that column is your ID column.
+    #
+    # WARNING:
+    #   - you will get weird data constellations if you create some data locally and then apply a "delta"
+    #   - records removed on the remote will still be there locally
+    #   - this is just for the lazy and impatient of us!
+    eeekkksss:
+      base: all
+      except: [table_without_id_column]
+      incremental: true
+      incremental_columns: # in case you want to override the `id' column per table (default is id)
+        some_table: custom_id
+        another_table: created_at # don't use dates, use unique IDs!
