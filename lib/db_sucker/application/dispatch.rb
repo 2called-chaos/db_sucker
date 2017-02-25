@@ -1,83 +1,33 @@
-# Encoding: Utf-8
 module DbSucker
   class Application
     module Dispatch
       def dispatch action = (@opts[:dispatch] || :help)
-        case action
-          when :version, :info then dispatch_info
-          else
-            if respond_to?("dispatch_#{action}")
-              send("dispatch_#{action}")
-            else
-              abort("unknown action #{action}", 1)
-            end
+        if respond_to?("dispatch_#{action}")
+          send("dispatch_#{action}")
+        else
+          abort("unknown action `#{action}'\nRegistered actions: #{available_actions.join(", ")}")
         end
       end
 
-      def dispatch_help
-        logger.log_without_timestr do
-          log ""
-          @optparse.to_s.split("\n").each(&method(:log))
-          log ""
-          log "The current config directory is #{c config_dir.to_s, :magenta}\n"
-        end
-      end
-
-      def dispatch_info
-        logger.log_without_timestr do
-          log ""
-          log "     Your version: #{your_version = Gem::Version.new(DbSucker::VERSION)}"
-
-          # get current version
-          logger.log_with_print do
-            log "  Current version: "
-            if @opts[:check_for_updates]
-              require "net/http"
-              log c("checking...", :blue)
-
-              begin
-                current_version = Gem::Version.new Net::HTTP.get_response(URI.parse(DbSucker::UPDATE_URL)).body.strip
-
-                if current_version > your_version
-                  status = c("#{current_version} (consider update)", :red)
-                elsif current_version < your_version
-                  status = c("#{current_version} (ahead, beta)", :green)
-                else
-                  status = c("#{current_version} (up2date)", :green)
-                end
-              rescue
-                status = c("failed (#{$!.message})", :red)
-              end
-
-              logger.raw "#{"\b" * 11}#{" " * 11}#{"\b" * 11}", :print # reset cursor
-              log status
-            else
-              log c("check disabled", :red)
-            end
-          end
-          log ""
-          log "  The current config directory is #{c config_dir.to_s, :magenta}"
-
-          # more info
-          log ""
-          log "  DBSucker is brought to you by #{c "bmonkeys.net", :green}"
-          log "  Contribute @ #{c "github.com/2called-chaos/db_sucker", :cyan}"
-          log "  Eat bananas every day!"
-          log ""
-        end
+      def available_actions
+        methods.select{|m| m.to_s.start_with?("dispatch_") }.map{|s| s.to_s.gsub(/\Adispatch_/, "").to_sym }
       end
 
       def configful_dispatch identifier, variation, &block
-        log "Using config directory #{c config_dir.to_s, :magenta}"
-        log "Found #{c config_files.count, :blue} #{c "config files"}#{c "..."}"
-        load_all_configs
+        log "Using config directory #{c core_cfg_path.to_s, :magenta}"
 
-        if identifier.present?
-          if ctn = cfg.get(identifier)
-            ctn.ssh_begin
-          else
-            abort "Identifier `#{identifier}' couldn't be found!", 1
-          end
+        all_cfgs = cfg.yml_configs(true)
+        enabled  = cfg.yml_configs(false)
+        disabled = all_cfgs - enabled
+        r = c("Found #{c all_cfgs.count, :blue} #{c "config files"}")
+        r << c(" (#{c "#{disabled.count} disabled", :red}#{c ")"}") if disabled.any?
+        log r << c("...")
+
+        cfg.load_all_configs
+        ctn = cfg.get(identifier)
+
+        if identifier.present? && !ctn
+          abort "Identifier `#{identifier}' couldn't be found!", 1
         end
 
         if ctn && variation && !(var = ctn.variation(variation))
@@ -85,29 +35,84 @@ module DbSucker
         end
 
         block.call(identifier, ctn, variation, var)
-      ensure
-        ctn.try(:ssh_end)
+      end
+
+      # ----------------------------------------------------------------------
+
+      def dispatch_help
+        colorized_help = @optparse.to_s.split("\n").map do |l|
+          if l.start_with?("Usage:")
+            lc = l.split(" ")
+            "#{c lc[0]} #{c lc[1], :blue} #{c lc[2..-1].join(" "), :cyan}"
+          elsif l.start_with?("#")
+            c(l, :blue)
+          elsif l.strip.start_with?("-")
+            "#{c l.to_s[0...33], :cyan}#{c l[33..-1]}"
+          else
+            c(l)
+          end
+        end
+        puts nil, colorized_help, nil
+        puts c("The current config directory is #{c core_cfg_path.to_s, :magenta}"), nil
+      end
+
+      def dispatch_info
+        your_version = Gem::Version.new(DbSucker::VERSION)
+        puts c ""
+        puts c("     Your version: ", :blue) << c("#{your_version}", :magenta)
+
+        print c("  Current version: ", :blue)
+        if @opts[:check_for_updates]
+          require "net/http"
+          print c("checking...", :blue)
+
+          begin
+            current_version = Gem::Version.new Net::HTTP.get_response(URI.parse(DbSucker::UPDATE_URL)).body.strip
+
+            if current_version > your_version
+              status = c("#{current_version} (consider update)", :red)
+            elsif current_version < your_version
+              status = c("#{current_version} (ahead, beta)", :green)
+            else
+              status = c("#{current_version} (up2date)", :green)
+            end
+          rescue
+            status = c("failed (#{$!.message})", :red)
+          end
+
+          print "#{"\b" * 11}#{" " * 11}#{"\b" * 11}" # reset line
+          puts status
+        else
+          puts c("check disabled", :red)
+        end
+
+        # more info
+        puts c ""
+        puts c "  DbSucker is brought to you by #{c "bmonkeys.net", :green}"
+        puts c "  Contribute @ #{c "github.com/2called-chaos/db_sucker", :cyan}"
+        puts c "  Eat bananas every day!"
+        puts c ""
       end
 
       def _dispatch_stat_tmp_display files, directories, managed, cleanup = false, sftp = false
         log "Directories: #{c directories.count, :blue}"
         log "      Files: #{c files.count, :blue} #{c "("}#{c managed.count, :blue}#{c " managed)"}"
-        log "       Size: #{c human_filesize(files.map(&:second).sum), :blue} #{c "("}#{c human_filesize(managed.map(&:second).sum), :blue} #{c "managed)"}"
+        log "       Size: #{c human_bytes(files.map(&:second).sum), :blue} #{c "("}#{c human_bytes(managed.map(&:second).sum), :blue} #{c "managed)"}"
 
         if cleanup
           if managed.any?
             log c("WE ONLY SIMULATE! Nothing will be deleted!", :green) if opts[:simulate]
-            logger.warn "----------- Removing #{managed.count} managed files! Press Ctrl-C to abort -----------"
-            managed.each{|f, s| logger.warn "  REMOVE #{c "#{f}", :magenta} #{c human_filesize(s), :cyan}" }
-            logger.warn "----------- Removing #{managed.count} managed files! Press Ctrl-C to abort -----------"
+            warning "----------- Removing #{managed.count} managed files! Press Ctrl-C to abort -----------"
+            managed.each{|f, s| warning "  REMOVE #{c "#{f}", :magenta} #{c human_bytes(s), :cyan}" }
+            warning "----------- Removing #{managed.count} managed files! Press Ctrl-C to abort -----------"
             sleep 3
             4.times {|n| log "Cleaning up in #{3 - n}..." ; sleep 1 ; rll }
 
             managed.each do |f, s|
               if opts[:simulate]
-                logger.warn "(simulate)   Removing #{f}..."
+                warning "(simulate)   Removing #{f}..."
               else
-                logger.warn "Removing #{f}..."
+                warning "Removing #{f}..."
                 sftp ? sftp.remove!(f) : File.unlink(f)
               end
             end
@@ -117,17 +122,16 @@ module DbSucker
         end
       end
 
-
       def dispatch_stat_tmp cleanup = false
         configful_dispatch(ARGV.shift, ARGV.shift) do |identifier, ctn, variation, var|
           if ctn
-            ctn.sftp_start do |sftp|
-              log c "Analyzing temp directory #{c ctn.tmp_path, :magenta}", :green
+            ctn.sftp_begin do |sftp|
+              log c("Analyzing ") << c("remote", :cyan) << c(" temp directory #{c ctn.tmp_path, :magenta}")
               begin
                 files = sftp.dir.glob("#{ctn.tmp_path}", "**/*")
               rescue Net::SFTP::StatusException => ex
                 if ex.message["no such file"]
-                  logger.warn "Destination directory `#{ctn.tmp_path}' does not exist on the remote side!"
+                  warning "Destination directory `#{ctn.tmp_path}' does not exist on the remote side!"
                 else
                   raise
                 end
@@ -139,8 +143,8 @@ module DbSucker
               _dispatch_stat_tmp_display(d_files, d_directories, d_managed, cleanup, sftp)
             end
           else
-            tpath = "#{File.expand_path(ENV["DBS_TMPDIR"] || ENV["TMPDIR"] || "/tmp")}/db_sucker_tmp"
-            log c "Analyzing local temp directory #{c tpath, :magenta}", :green
+            tpath = "#{core_tmp_path}/db_sucker_tmp"
+            log c("Analyzing ") << c("local", :cyan) << c(" temp directory #{c tpath, :magenta}")
             files = Dir.glob("#{tpath}/**/*")
 
             managed_files = files
@@ -156,118 +160,119 @@ module DbSucker
         dispatch_stat_tmp(true)
       end
 
+      def _list_databases identifier, ctn, variation, var
+        return unless opts[:list_databases]
+        log "Listing databases for identifier #{c identifier, :magenta}#{c "..."}"
+        dbs = ctn.database_list(opts[:list_tables])
+        print_db_table_list ctn.hostname, dbs
+        throw :dispatch_handled
+      end
+
+      def _list_tables identifier, ctn, variation, var
+        return if !(opts[:list_tables].present? && opts[:list_tables] != :all)
+        print_db_table_list ctn.hostname, [[opts[:list_tables], ctn.table_list(opts[:list_tables])]]
+        throw :dispatch_handled
+      end
+
+      def _suck_variation identifier, ctn, variation, var
+        if ctn && var
+          id = uniqid
+          trap_signals
+          ttt = var.tables_to_transfer
+          log "Transfering #{c ttt.count, :blue} #{c "tables from DB"} #{c ctn.data["source"]["database"], :magenta}#{c "..."}"
+          log "Transaction ID is #{c id, :blue}"
+
+          if ctn.tmp_path.present?
+            ctn.sftp_begin
+            begin
+              ctn.sftp_start do |sftp|
+                # check tmp directory
+                debug "Checking remote temp directory #{c ctn.tmp_path, :magenta}"
+                begin
+                  sftp.dir.glob("#{ctn.tmp_path}", "**/*")
+                rescue Net::SFTP::StatusException => ex
+                  if ex.message["no such file"]
+                    abort "Destination directory `#{ctn.tmp_path}' does not exist on the remote side!", 2
+                  else
+                    raise
+                  end
+                end
+              end
+
+              # starting workers
+              workers = []
+              ttt.each do |tab|
+                debug "Starting worker for table `#{tab}' (#{id})..."
+                workers << Configuration::Worker.new(self, id, ctn, var, tab)
+              end
+
+              # progess display
+              log ""
+              sleep 0.1
+              first_iteration = true
+              active_workers = []
+              all_workers = workers.dup
+              display = Thread.new do
+                while workers.any? || active_workers.any?(&:active?)
+                  # activate workers
+                  active_workers = active_workers.select(&:active?) if ttt.length > 20
+                  while active_workers.select(&:active?).count < 20 && workers.any?
+                    w = workers.shift
+                    w.start
+                    active_workers << w
+                  end
+
+                  # create deferred workers
+                  $deferred_import.synchronize do
+                    while $deferred_import.any?
+                      w = Configuration::Worker.new(self, *$deferred_import.shift)
+                      workers << w
+                      all_workers << w
+                    end
+                  end
+
+                  # render table
+                  render_progress_table(all_workers, workers, active_workers, !first_iteration)
+                  first_iteration = false
+                  sleep 0.5
+                end
+              end
+
+              # poll ssh
+              poll = Thread.new do
+                ctn.loop_ssh(0.1) { workers.any? || active_workers.any?(&:active?) }
+              end
+
+              display.join
+              poll.join
+
+              # finish up
+              render_progress_table(all_workers, workers, all_workers, true)
+              log ""
+              log c("All done", :green) unless Thread.main[:shutdown]
+            ensure
+              ctn.sftp_end
+            end
+          else
+            abort "Transfering streams is not yet implemented :( Please define a tmp_location in your source config.", 1
+          end
+
+          release_signals(true)
+          return
+        end
+      end
+
+      def _default_listing identifier, ctn, variation, var
+        db_table_listing(ctn ? [[identifier, ctn]] : cfg)
+      end
+
       def dispatch_index
         configful_dispatch(ARGV.shift, ARGV.shift) do |identifier, ctn, variation, var|
-          # ============
-          # = List DBs =
-          # ============
-          if opts[:list_databases]
-            log "Listing databases for identifier #{c identifier, :magenta}#{c "..."}"
-            dbs = ctn.mysql_database_list(opts[:list_tables])
-
-            print_db_table_list(ctn.mysql_hostname, dbs)
-            return
-          end
-
-          # ===============
-          # = List tables =
-          # ===============
-          if opts[:list_tables].present? && opts[:list_tables] != :all
-            print_db_table_list ctn.mysql_hostname, [[opts[:list_tables], ctn.mysql_table_list(opts[:list_tables])]]
-            return
-          end
-
-          # ==================
-          # = Suck variation =
-          # ==================
-          if ctn && var
-            id = uniqid
-            trap_signals
-            ttt = var.tables_to_transfer
-            log "Transfering #{c ttt.count, :blue} #{c "tables from DB"} #{c ctn.data["source"]["database"], :magenta}#{c "..."}"
-            log "Transaction ID is #{c id, :blue}"
-
-            if ctn.tmp_path.present?
-              ctn.sftp_begin
-              begin
-                ctn.sftp_start do |sftp|
-                  # check tmp directory
-                  debug "Checking remote temp directory #{c ctn.tmp_path, :magenta}"
-                  begin
-                    sftp.dir.glob("#{ctn.tmp_path}", "**/*")
-                  rescue Net::SFTP::StatusException => ex
-                    if ex.message["no such file"]
-                      abort "Destination directory `#{ctn.tmp_path}' does not exist on the remote side!", 2
-                    else
-                      raise
-                    end
-                  end
-                end
-
-                # starting workers
-                workers = []
-                ttt.each do |tab|
-                  debug "Starting worker for table `#{tab}' (#{id})..."
-                  workers << Configuration::Worker.new(self, id, ctn, var, tab)
-                end
-
-                # progess display
-                log ""
-                sleep 0.1
-                first_iteration = true
-                active_workers = []
-                all_workers = workers.dup
-                display = Thread.new do
-                  while workers.any? || active_workers.any?(&:active?)
-                    # activate workers
-                    active_workers = active_workers.select(&:active?) if ttt.length > 20
-                    while active_workers.select(&:active?).count < 20 && workers.any?
-                      w = workers.shift
-                      w.start
-                      active_workers << w
-                    end
-
-                    # create deferred workers
-                    $deferred_import.synchronize do
-                      while $deferred_import.any?
-                        w = Configuration::Worker.new(self, *$deferred_import.shift)
-                        workers << w
-                        all_workers << w
-                      end
-                    end
-
-                    # render table
-                    render_progress_table(all_workers, workers, active_workers, !first_iteration)
-                    first_iteration = false
-                    sleep 0.5
-                  end
-                end
-
-                # poll ssh
-                poll = Thread.new do
-                  ctn.loop_ssh(0.1) { workers.any? || active_workers.any?(&:active?) }
-                end
-
-                display.join
-                poll.join
-
-                # finish up
-                render_progress_table(all_workers, workers, all_workers, true)
-                log ""
-                log c("All done", :green) unless Thread.main[:shutdown]
-              ensure
-                ctn.sftp_end
-              end
-            else
-              abort "Transfering streams is not yet implemented :( Please define a tmp_location in your source config.", 1
+          catch :dispatch_handled do
+            [:_list_databases, :_list_tables, :_suck_variation, :_default_listing].each do |meth|
+              __send__(meth, identifier, ctn, variation, var)
             end
-
-            release_signals(true)
-            return
           end
-
-          # default listing
-          db_table_listing(ctn ? [[identifier, ctn]] : cfg)
         end
       end
     end

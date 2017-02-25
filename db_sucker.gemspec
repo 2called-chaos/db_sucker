@@ -18,12 +18,13 @@ Gem::Specification.new do |spec|
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ["lib"]
 
-  spec.add_development_dependency "bundler", "~> 1.5"
-  spec.add_development_dependency "rake", "~> 10.4"
-  spec.add_dependency "activesupport", "~> 4.2"
-  spec.add_dependency "pry", "~> 0.10"
-  spec.add_dependency "net-ssh", "~> 2.9"
-  spec.add_dependency "net-sftp", "~> 2.1"
-  spec.add_dependency "mysql2", "~> 0.3"
-  spec.add_dependency "sequel", "~> 4.25"
+  spec.add_dependency "curses"
+  spec.add_dependency "activesupport" #, "~> 4.2"
+  spec.add_dependency "pry" #, "~> 0.10"
+  spec.add_dependency "net-ssh" #, "~> 2.9"
+  spec.add_dependency "net-sftp" #, "~> 2.1"
+  spec.add_dependency "mysql2" #, "~> 0.3"
+  spec.add_dependency "sequel" #, "~> 4.25"
+  spec.add_development_dependency "bundler" #, "~> 1.5"
+  spec.add_development_dependency "rake" #, "~> 10.4"
 end

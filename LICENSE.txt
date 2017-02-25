@@ -1,4 +1,4 @@
-Copyright (c) 2014 Sven Pachnit, bmonkeys.net
+Copyright (c) 2017 Sven Pachnit, bmonkeys.net
 
 MIT License
 
