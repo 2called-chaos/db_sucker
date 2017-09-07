@@ -2,7 +2,7 @@ module DbSucker
   class Application
     module OutputHelper
       def self.hook ctx
-        [:puts, :print, :warn, :debug, :log, :warning, :error, :abort, :uncolorize, :db_table_listing, :print_db_table_list, :uncolorize, :render_table, :human_bytes, :human_number, :human_percentage, :human_seconds, :rll, :c].each do |meth|
+        [:puts, :print, :warn, :debug, :log, :warning, :error, :abort, :uncolorize, :db_table_listing, :print_db_table_list, :uncolorize, :render_table, :f_percentage, :human_bytes, :human_number, :human_percentage, :human_seconds, :human_seconds2, :rll, :c].each do |meth|
           ctx.__send__(:define_method, meth) do |*a|
             Thread.main[:app].__send__(meth, *a)
           end
@@ -121,6 +121,10 @@ module DbSucker
         end
       end
 
+      def f_percentage have, total, nn = 2
+        human_percentage(total == 0 ? 100 : have == 0 ? 0 : (have.to_d / total.to_d * 100.to_d), nn)
+      end
+
       def human_bytes bytes
         return false unless bytes
         {
@@ -129,7 +133,7 @@ module DbSucker
           'MB' => 1024 * 1024 * 1024,
           'GB' => 1024 * 1024 * 1024 * 1024,
           'TB' => 1024 * 1024 * 1024 * 1024 * 1024
-        }.each_pair { |e, s| return "#{"%.2f" % (bytes.to_f / (s / 1024)).round(2)} #{e}" if bytes < s }
+        }.each_pair { |e, s| return "#{"%.2f" % (bytes.to_d / (s / 1024)).round(2)} #{e}" if bytes < s }
       end
 
       def human_number(n)
@@ -181,6 +185,10 @@ module DbSucker
 
           r << "#{secs}s" unless r.include?("d")
         end.strip
+      end
+
+      def human_seconds2 secs
+        Time.at(secs).utc.strftime("%H:%M:%S")
       end
     end
   end

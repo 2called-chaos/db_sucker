@@ -156,13 +156,6 @@ module DbSucker
           }
         end
 
-        def transfer_remote_to_local remote_file, local_file, blocking = true, &block
-          FileUtils.mkdir_p(File.dirname(local_file))
-          cfg.sftp_start(true) do |sftp|
-            sftp.download!(remote_file, local_file, read_size: 5 * 1024 * 1024, &block)
-          end
-        end
-
         def load_local_file worker, file, &block
           imp = data["importer"]
           impf = parse_flags(data["importer_flags"])

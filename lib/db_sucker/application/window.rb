@@ -59,6 +59,12 @@ module DbSucker
           update { __send__(:"_view_#{@view}") }
         end
       rescue StandardError => ex
+        Thread.main[:app].sync do
+          error "DbSucker::Window encountered an render error on tick ##{@t}"
+          warn c("\t#{ex.class}: #{ex.message}", :red)
+          ex.backtrace.each{|l| warn c("\t  #{l}", :red) }
+        end
+
         update do
           next_line
           attron(color_pair(COLOR_RED)|A_NORMAL) { addstr("RenderError occured!") }
@@ -110,25 +116,6 @@ module DbSucker
         app.debug "Leaving curses screen mode"
       end
 
-      # def progress_bar label, is, max, maxlength = nil
-      #   cr = maxlength || (cols-1)
-      #   cr -= label.length + 1
-
-      #   lp = is.to_f / max * 100
-      #   lps = " #{app.human_number(is)}/#{app.human_number(max)} – #{app.human_percentage(lp, 0)}"
-      #   cr -= lps.length + 1 if cr > lps.length
-
-      #   lc = lp > 90 ? COLOR_RED : lp > 75 ? COLOR_YELLOW : COLOR_GREEN
-      #   crr = (cr.to_f * (lp / 100)).ceil.to_i
-
-      #   attron(color_pair(COLOR_YELLOW)|A_NORMAL) { addstr("#{label} ") }
-      #   attron(color_pair(lc)|A_NORMAL) { addstr("[") }
-      #   attron(color_pair(lc)|A_NORMAL) { addstr("".ljust(crr, "|")) }
-      #   attron(color_pair(COLOR_GRAY)|A_NORMAL) { addstr("".ljust(cr - crr, "-")) }
-      #   attron(color_pair(COLOR_GRAY)|A_NORMAL) { addstr(lps) }
-      #   attron(color_pair(lc)|A_NORMAL) { addstr("]") }
-      # end
-
       def _view_status
         next_line
         attron(color_pair(COLOR_YELLOW)|A_NORMAL) { addstr("        Status: ") }
@@ -167,7 +154,7 @@ module DbSucker
 
         next_line
         total, done = sklaventreiber.data[:tables_transfer], sklaventreiber.data[:tables_done]
-        perc = total && done ? human_percentage(total.zero? ? 100 : done / total.to_f * 100) : "?"
+        perc = total && done ? f_percentage(done, total) : "?"
         attron(color_pair(COLOR_YELLOW)|A_NORMAL) { addstr("      Progress: ") }
         attron(color_pair(COLOR_GREEN)|A_NORMAL) { addstr(perc) }
         attron(color_pair(COLOR_YELLOW)|A_NORMAL) { addstr(" – ") }
@@ -227,13 +214,19 @@ module DbSucker
         if worker.step
           attron(color_pair(COLOR_CYAN)|A_NORMAL) { addstr("[#{worker.step}/#{worker.perform.length}] ") }
         end
-        attron(color_pair(self.class.const_get "COLOR_#{worker.status[1].to_s.upcase.presence || "BLUE"}")|A_NORMAL) { addstr(worker.status[0]) }
+        attron(color_pair(self.class.const_get "COLOR_#{worker.status[1].to_s.upcase.presence || "BLUE"}")|A_NORMAL) do
+          if worker.status[0].respond_to?(:to_curses)
+            instance_exec worker.status[0].to_curses
+          else
+            addstr("#{worker.status[0]}")
+          end
+        end
       end
 
       # used to render everything before exiting, can't fucking dump the pads I tried to implement -.-"
       def _render_final_results
         t_db, t_total, t_done = sklaventreiber.data[:database], sklaventreiber.data[:tables_transfer], sklaventreiber.data[:tables_done]
-        perc = t_total && t_done ? human_percentage(t_total.zero? ? 100 : t_done / t_total.to_f * 100) : "?"
+        perc = t_total && t_done ? f_percentage(t_done, t_total) : "?"
 
         puts
         puts c("        Status: ") << c(sklaventreiber.status[0], sklaventreiber.status[1].presence || "red")
