@@ -3,6 +3,7 @@ module DbSucker
     module Colorize
       COLORMAP = {
         black: 30,
+        gray: 30,
         red: 31,
         green: 32,
         yellow: 33,

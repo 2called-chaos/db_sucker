@@ -187,8 +187,6 @@ module DbSucker
             end if @opts[:stdout].respond_to?(:spooldown)
             @opts[:stdout] = stdout_was
             release_signals
-            log ""
-            log c("All done", :green) unless $core_runtime_exiting
           end
           throw :dispatch_handled
         end

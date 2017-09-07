@@ -69,7 +69,7 @@ module DbSucker
         # end
 
         # starting consumers
-        @sleep_before_exit = 5
+        @sleep_before_exit = 3
         cnum = [app.opts[:consumers], @data[:tables_transfer]].min
         @data[:window_col2] = cnum.to_s.length
         if cnum <= 1
@@ -78,12 +78,12 @@ module DbSucker
           # control thread
           ctrlthr = Thread.new do
             loop do
-              break if Thread.current[:stop]
               if $core_runtime_exiting && $core_runtime_exiting < 100
                 $core_runtime_exiting += 100
                 @workers.each(&:cancel!)
                 Thread.current[:stop] = true
               end
+              break if Thread.current[:stop]
               sleep 0.1
             end
           end
