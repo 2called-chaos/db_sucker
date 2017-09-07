@@ -4,8 +4,8 @@ module DbSucker
       class Worker
         class SftpDownload
           STATUS_FORMATTERS = [:none, :minimal, :full]
-          attr_reader :status_format, :state, :downloader, :error, :filesize, :offset
-          attr_accessor :read_size
+          attr_reader :status_format, :state, :downloader, :dlerror, :filesize, :offset, :closing
+          attr_accessor :read_size, :last_offset, :last_time
           OutputHelper.hook(self)
 
           def initialize ctn, fd
@@ -18,7 +18,7 @@ module DbSucker
           end
 
           def reset_state
-            @error = nil
+            @dlerror = nil
             @closing = false
             @downloader = nil
             @state = :idle
@@ -68,7 +68,7 @@ module DbSucker
                 end
               end
             rescue Net::SSH::Disconnect => ex
-              @error = "##{try} #{ex.class}: #{ex.message}"
+              @dlerror = "##{try} #{ex.class}: #{ex.message}"
               try += 1
               sleep 3
               if try > opts[:tries]
@@ -80,7 +80,7 @@ module DbSucker
           end
 
           def to_s
-            return @error if @error
+            return @dlerror if @dlerror
 
             _str = [].tap do |r|
               r << "[CLOSING]" if @closing
@@ -114,6 +114,7 @@ module DbSucker
                 end
 
                 r << "downloading:"
+                r << f_percentage(@offset, @filesize).rjust(7, " ")
                 if @status_format == :minimal
                   r << "[#{eta}]"
                 elsif @status_format == :full
@@ -126,9 +127,6 @@ module DbSucker
                   r << "[#{f_has.rjust(f_tot.length, "0")}/#{f_tot}]"
                 end
 
-                r << f_percentage(@offset, @filesize).rjust(7, " ")
-
-                r << "[#########.............]"
 
                 @last_offset = @offset
                 @last_time = Time.now
@@ -137,30 +135,96 @@ module DbSucker
             c(_str, @closing ? :red : :yellow)
           end
 
-          # def to_curses
-          #   Proc.new do
+          def to_curses target
+            _this = self
+            target.instance_eval do
+              if _this.dlerror
+                attron(color_pair(Window::COLOR_RED)|Window::A_BOLD) { addstr("#{_this.dlerror}") }
+                return
+              end
 
-          #   end
+              if _this.closing
+                attron(color_pair(Window::COLOR_RED)|Window::A_BOLD) { addstr("[CLOSING] ") }
+              end
 
-          #   # def progress_bar label, is, max, maxlength = nil
-          #   #   cr = maxlength || (cols-1)
-          #   #   cr -= label.length + 1
+              if _this.status_format == :none
+                attron(color_pair(Window::COLOR_BLUE)|Window::A_BOLD) { addstr("downloading") }
+                break
+              end
 
-          #   #   lp = is.to_f / max * 100
-          #   #   lps = " #{app.human_number(is)}/#{app.human_number(max)} – #{app.human_percentage(lp, 0)}"
-          #   #   cr -= lps.length + 1 if cr > lps.length
+              case _this.state
+              when :idle, :init
+                attron(color_pair(Window::COLOR_BLUE)|Window::A_BOLD) { addstr("downloading: ") }
+                attron(color_pair(Window::COLOR_GRAY)|Window::A_BOLD) { addstr("initiating...") }
+              when :finishing
+                attron(color_pair(Window::COLOR_BLUE)|Window::A_BOLD) { addstr("downloading: ") }
+                attron(color_pair(Window::COLOR_GRAY)|Window::A_BOLD) { addstr("finishing...") }
+              when :done
+                attron(color_pair(Window::COLOR_GREEN)|Window::A_BOLD) { addstr("download complete: 100%") }
+                attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr(" – ") }
+                attron(color_pair(Window::COLOR_CYAN)|Window::A_BOLD) { addstr("#{human_bytes _this.filesize}") }
+              when :downloading
+                bytes_remain = _this.filesize - _this.offset
+                if _this.last_time
+                  offset_diff = _this.offset - _this.last_offset
+                  time_diff = (Time.now - _this.last_time).to_d
+                  bps = (time_diff * offset_diff.to_d) * (1.to_d/time_diff)
+                  eta = human_seconds2(bytes_remain / bps)
+                else
+                  offset_diff = 0
+                  bps = 0
+                  eta = "???"
+                end
 
-          #   #   lc = lp > 90 ? COLOR_RED : lp > 75 ? COLOR_YELLOW : COLOR_GREEN
-          #   #   crr = (cr.to_f * (lp / 100)).ceil.to_i
+                attron(color_pair(Window::COLOR_BLUE)|Window::A_BOLD) { addstr("downloading: ") }
+                diffp = _this.offset == 0 ? 0 : _this.offset.to_d / _this.filesize.to_d * 100.to_d
+                color = diffp > 90 ? Window::COLOR_GREEN : diffp > 75 ? Window::COLOR_YELLOW : diffp > 50 ? Window::COLOR_BLUE : diffp > 25 ? Window::COLOR_CYAN : Window::COLOR_RED
+                attron(color_pair(color)|Window::A_NORMAL) { addstr(f_percentage(_this.offset, _this.filesize).rjust(7, " ") << " ") }
 
-          #   #   attron(color_pair(COLOR_YELLOW)|A_NORMAL) { addstr("#{label} ") }
-          #   #   attron(color_pair(lc)|A_NORMAL) { addstr("[") }
-          #   #   attron(color_pair(lc)|A_NORMAL) { addstr("".ljust(crr, "|")) }
-          #   #   attron(color_pair(COLOR_GRAY)|A_NORMAL) { addstr("".ljust(cr - crr, "-")) }
-          #   #   attron(color_pair(COLOR_GRAY)|A_NORMAL) { addstr(lps) }
-          #   #   attron(color_pair(lc)|A_NORMAL) { addstr("]") }
-          #   # end
-          # end
+                if _this.status_format == :minimal
+                  attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr("[#{eta}]") }
+                elsif _this.status_format == :full
+                  attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr("[#{eta} – #{human_bytes(bps).rjust(9, " ")}/s]") }
+                end
+
+                if _this.status_format == :full
+                  f_has = human_bytes _this.offset
+                  f_tot = human_bytes _this.filesize
+                  attron(color_pair(Window::COLOR_GRAY)|Window::A_BOLD) { addstr(" [#{f_has.rjust(f_tot.length, "0")}/#{f_tot}]") }
+                end
+
+                # progress bar
+                max = cols - stdscr.curx - 3
+                pnow = (max.to_d * (diffp / 100.to_d)).ceil.to_i
+                attron(color_pair(Window::COLOR_YELLOW)|Window::A_NORMAL) { addstr(" [") }
+                attron(color_pair(color)|Window::A_NORMAL) { addstr("".ljust(pnow, "#")) }
+                attron(color_pair(Window::COLOR_GRAY)|Window::A_NORMAL) { addstr("".ljust(max - pnow, ".")) }
+                attron(color_pair(Window::COLOR_YELLOW)|Window::A_NORMAL) { addstr("]") }
+
+                _this.last_offset = _this.offset
+                _this.last_time = Time.now
+              end
+            end
+
+            # def progress_bar label, is, max, maxlength = nil
+            #   cr = maxlength || (cols-1)
+            #   cr -= label.length + 1
+
+            #   lp = is.to_f / max * 100
+            #   lps = " #{app.human_number(is)}/#{app.human_number(max)} – #{app.human_percentage(lp, 0)}"
+            #   cr -= lps.length + 1 if cr > lps.length
+
+            #
+            #   crr = (cr.to_f * (lp / 100)).ceil.to_i
+
+            #   attron(color_pair(COLOR_YELLOW)|A_NORMAL) { addstr("#{label} ") }
+            #   attron(color_pair(lc)|A_NORMAL) { addstr("[") }
+            #   attron(color_pair(lc)|A_NORMAL) { addstr("".ljust(crr, "|")) }
+            #   attron(color_pair(COLOR_GRAY)|A_NORMAL) { addstr("".ljust(cr - crr, "-")) }
+            #   attron(color_pair(COLOR_GRAY)|A_NORMAL) { addstr(lps) }
+            #
+            # end
+          end
         end
       end
     end

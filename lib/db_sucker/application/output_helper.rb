@@ -188,7 +188,7 @@ module DbSucker
       end
 
       def human_seconds2 secs
-        Time.at(secs).utc.strftime("%H:%M:%S")
+        Time.at(secs).utc.strftime("%k:%M:%S").strip
       end
     end
   end

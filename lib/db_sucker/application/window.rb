@@ -207,7 +207,7 @@ module DbSucker
         end
 
         # table_name
-        attron(color_pair(COLOR_MAGENTA)|A_NORMAL) { addstr(" #{worker.table}".ljust(col1 + 2, " ")) }
+        attron(color_pair(COLOR_MAGENTA)|A_NORMAL) { addstr(" #{worker.table}".ljust(col1 + 1, " ")) }
         attron(color_pair(COLOR_GRAY)|A_NORMAL) { addstr(" | ") }
 
         # status
@@ -216,7 +216,8 @@ module DbSucker
         end
         attron(color_pair(self.class.const_get "COLOR_#{worker.status[1].to_s.upcase.presence || "BLUE"}")|A_NORMAL) do
           if worker.status[0].respond_to?(:to_curses)
-            instance_exec worker.status[0].to_curses
+            #addstr("#{curx}")
+            worker.status[0].to_curses(self)
           else
             addstr("#{worker.status[0]}")
           end
@@ -253,7 +254,7 @@ module DbSucker
                 when :canceled then c("⊘", :red)
               end
               # table
-              res << c(" #{worker.table}".ljust(col1 + 2, " "), :magenta) << c(" | ", :black)
+              res << c(" #{worker.table}".ljust(col1 + 1, " "), :magenta) << c(" | ", :black)
               # steps
               res << c("[#{worker.step}/#{worker.perform.length}] ", :cyan) if worker.step
               # status
