@@ -74,7 +74,26 @@ module DbSucker
         @data[:window_col2] = cnum.to_s.length
         if cnum <= 1
           @status = ["running in main thread...", "green"]
-          _queueoff
+
+          # control thread
+          ctrlthr = Thread.new do
+            loop do
+              break if Thread.current[:stop]
+              if $core_runtime_exiting && $core_runtime_exiting < 100
+                $core_runtime_exiting += 100
+                @workers.each(&:cancel!)
+                Thread.current[:stop] = true
+              end
+              sleep 0.1
+            end
+          end
+
+          begin
+            _queueoff
+          ensure
+            ctrlthr[:stop] = true
+            ctrlthr.join
+          end
         else
           @status = ["starting consumer 0/#{cnum}", "blue"]
 
@@ -101,14 +120,14 @@ module DbSucker
           @threads.each(&:join)
         end
       ensure
-        # app.sandboxed do
-        #   @status = ["terminating (SSH poll)", "red"]
-        #   @poll.join
-        # end
+        app.sandboxed do
+          @status = ["terminating (SSH poll)", "red"]
+          @poll.try(:join)
+        end
         @status = ["terminated", "red"]
         sleep @sleep_before_exit
-        app.sandboxed { @window.close }
-        app.sandboxed { @ctn.sftp_end }
+        app.sandboxed { @window.try(:close) }
+        app.sandboxed { @ctn.try(:sftp_end) }
         @ctn, @var = nil, nil
       end
 
