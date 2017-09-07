@@ -34,9 +34,9 @@ module DbSucker
       def __keys_for which
         {
           root: %w[source variations],
-          source: %w[adapter ssh database hostname username password args binary],
+          source: %w[adapter ssh database hostname username password args client_binary dump_binary],
           source_ssh: %w[hostname username keyfile password port tmp_location],
-          variation: %w[adapter label base database hostname username password args incremental file gzip only except importer ignore_always constraints],
+          variation: %w[adapter label base database hostname username password args incremental file gzip only except importer importer_flags ignore_always constraints],
         }[which] || []
       end
 
@@ -83,12 +83,20 @@ module DbSucker
         end
       end
 
+      def ctn
+        self
+      end
+
+      def source
+        ctn.data["source"]
+      end
+
       def source_database
-        data["source"]["database"]
+        source["database"]
       end
 
       def tmp_path
-        data["source"]["ssh"]["tmp_location"].presence || "/tmp/db_sucker_tmp"
+        source["ssh"]["tmp_location"].presence || "/tmp/db_sucker_tmp"
       end
 
       def variations

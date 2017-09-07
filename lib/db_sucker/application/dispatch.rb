@@ -34,7 +34,12 @@ module DbSucker
           abort "Variation `#{variation}' for identifier `#{identifier}' couldn't be found!", 1
         end
 
-        block.call(identifier, ctn, variation, var)
+        begin
+          ctn.ssh_begin
+          block.call(identifier, ctn, variation, var)
+        ensure
+          ctn.try(:ssh_end)
+        end
       end
 
       # ----------------------------------------------------------------------

@@ -63,10 +63,10 @@ module DbSucker
           @workers << Worker.new(self, ctn, var, table)
         end
 
-        # # poll ssh
-        # @poll = Thread.new do
-        #   ctn.loop_ssh(0.1) { workers.any? || active_workers.any?(&:active?) }
-        # end
+        # poll ssh
+        @poll = Thread.new do
+          @ctn.loop_ssh(0.1) { @workers.reject(&:done?).any? }
+        end
 
         # starting consumers
         @sleep_before_exit = 3

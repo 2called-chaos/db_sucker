@@ -38,7 +38,7 @@ module DbSucker
             @state = :running
             @started = Time.current
             @download_state = { state: :idle, offset: 0 }
-            @files_to_remove = []
+            @remote_files_to_remove = []
             @local_files_to_remove = []
 
             catch :abort_execution do
@@ -54,20 +54,20 @@ module DbSucker
             @status = ["FAILED (#{ex.message})", "red"]
             @state = :failed
           ensure
-            @ended = Time.current
-            @state = :done if !canceled? && !failed?
-
             # cleanup temp files
             ctn.sftp_start do |sftp|
-              @files_to_remove.each do |file|
+              @remote_files_to_remove.each do |file|
                 sftp.remove!(file) rescue false
               end
-            end if @files_to_remove.any?
+            end if @remote_files_to_remove.any?
 
             # cleanup local temp files
             @local_files_to_remove.each do |file|
               File.unlink(file) rescue false
             end
+
+            @ended = Time.current
+            @state = :done if !canceled? && !failed?
           end
         end
 
@@ -164,19 +164,37 @@ module DbSucker
               human_seconds ((@ended || Time.current) - @started).to_i
             end
           end
+
+          def second_progress channel, status, color = :yellow, is_thread = false, initial = 0
+            Thread.new do
+              Thread.current[:iteration] = initial
+              loop do
+                channel.close rescue false if $core_runtime_exiting
+                stat = status.gsub(":seconds", human_seconds(Thread.current[:iteration]))
+                stat = stat.gsub(":workers", channel[:workers].to_s.presence || "?") if is_thread
+                if channel[:error_message]
+                  @status = ["[IMPORT] #{channel[:error_message]}", :red]
+                elsif channel.closing?
+                  @status = ["[CLOSING] #{stat}", :red]
+                else
+                  @status = [stat, color]
+                end
+                break unless channel.active?
+                sleep 1
+                Thread.current[:iteration] += 1
+              end
+            end
+          end
         end
 
         begin # Subroutines
           def _dump_file
             @status = ["dumping table to remote file...", "yellow"]
-            sleep 5
-            return
 
             @rfile, cr = var.dump_to_remote(self, false)
-            @files_to_remove << @rfile
+            @remote_files_to_remove << @rfile
             @ffile = @rfile[0..-5]
             channel, result = cr
-            channel[:error_message] = result.inspect
             second_progress(channel, "dumping table to remote file (:seconds)...").join
 
             if result.any?
@@ -196,8 +214,8 @@ module DbSucker
             ctn.sftp_start do |sftp|
               sftp.rename!(@rfile, @ffile)
             end
-            @files_to_remove.delete(@rfile)
-            @files_to_remove << @ffile
+            @remote_files_to_remove.delete(@rfile)
+            @remote_files_to_remove << @ffile
           end
 
           def _compress_file
@@ -206,10 +224,10 @@ module DbSucker
             return
 
             @cfile, cr = var.compress_file(@ffile, false)
-            @files_to_remove << @cfile
+            @remote_files_to_remove << @cfile
             channel, result = cr
             second_progress(channel, "compressing file for transfer (:seconds)...").join
-            @files_to_remove.delete(@ffile)
+            @remote_files_to_remove.delete(@ffile)
           end
 
           def _download_file
