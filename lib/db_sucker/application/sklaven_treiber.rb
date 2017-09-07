@@ -33,6 +33,16 @@ module DbSucker
         # selecting tables
         @status = ["selecting tables for transfer", "blue"]
         ttt, at = var.tables_to_transfer
+
+        # apply only/except filters provided via command line
+        if @app.opts[:suck_only].any? && @app.opts[:suck_except].any?
+          raise ArgumentError, "Only one of `--only' or `--except' option can be provided at the same time"
+        elsif @app.opts[:suck_only].any?
+          ttt = @app.opts[:suck_only]
+        elsif @app.opts[:suck_except].any?
+          ttt = ttt - @app.opts[:suck_except]
+        end
+
         @data[:database] = ctn.source_database
         @data[:tables_transfer] = ttt.length
         @data[:window_col1] = ttt.map(&:length).max

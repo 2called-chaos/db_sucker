@@ -179,7 +179,8 @@ module DbSucker
       end
 
       def _suck_variation identifier, ctn, variation, var
-        if ctn && var
+        if ctn && (var || (@opts[:suck_only].any? || @opts[:suck_except].any?))
+          var ||= ctn.variation("default")
           begin
             stdout_was = @opts[:stdout]
             @opts[:stdout] = SklavenTreiber::LogSpool.new

@@ -58,6 +58,8 @@ module DbSucker
 
         list_databases: false,   # --list-databases flag
         list_tables: false,      # --list-tables flag
+        suck_only: [],           # --only flag
+        suck_except: [],         # --except flag
         simulate: false,         # --simulate flag
         deferred_import: true,   # -n flag
 
@@ -88,6 +90,8 @@ module DbSucker
         opts.on("-n", "--no-deffer", "Don't use deferred import for files > 50 MB SQL data size.") { @opts[:deferred_import] = false }
         opts.on("-l", "--list-databases", "List databases for given identifier.") { @opts[:list_databases] = true }
         opts.on("-t", "--list-tables [DATABASE]", String, "List tables for given identifier and database.", "If used with --list-databases the DATABASE parameter is optional.") {|s| @opts[:list_tables] = s || :all }
+        opts.on("-o", "--only table,table2", Array, "Only suck given tables. Identifier is required, variation is optional (defaults to default).", "WARNING: ignores ignore_always option") {|s| @opts[:suck_only] = s }
+        opts.on("-e", "--except table,table2", Array, "Don't suck given tables. Identifier is required, variation is optional (defaults to default).") {|s| @opts[:suck_except] = s }
         opts.on(      "--stat-tmp", "Show information about the remote temporary directory.", "If no identifier is given check local temp directory instead.") { @opts[:dispatch] = :stat_tmp }
         opts.on(      "--cleanup-tmp", "Remove all temporary files from db_sucker in target directory.") { @opts[:dispatch] = :cleanup_tmp }
         opts.on(      "--simulate", "To use with --cleanup-tmp to not actually remove anything.") { @opts[:simulate] = true }
