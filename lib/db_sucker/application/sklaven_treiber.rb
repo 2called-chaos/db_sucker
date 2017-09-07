@@ -128,6 +128,9 @@ module DbSucker
         sleep @sleep_before_exit
         app.sandboxed { @window.try(:close) }
         app.sandboxed { @ctn.try(:sftp_end) }
+        app.sandboxed do
+          app.puts @window.try(:_render_final_results)
+        end
         @ctn, @var = nil, nil
       end
 

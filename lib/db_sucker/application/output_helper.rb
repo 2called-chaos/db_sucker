@@ -2,7 +2,7 @@ module DbSucker
   class Application
     module OutputHelper
       def self.hook ctx
-        [:puts, :print, :warn, :debug, :log, :warning, :error, :abort, :uncolorize, :db_table_listing, :print_db_table_list, :uncolorize, :render_table, :human_bytes, :human_number, :human_percentage, :human_seconds, :rll].each do |meth|
+        [:puts, :print, :warn, :debug, :log, :warning, :error, :abort, :uncolorize, :db_table_listing, :print_db_table_list, :uncolorize, :render_table, :human_bytes, :human_number, :human_percentage, :human_seconds, :rll, :c].each do |meth|
           ctx.__send__(:define_method, meth) do |*a|
             Thread.main[:app].__send__(meth, *a)
           end

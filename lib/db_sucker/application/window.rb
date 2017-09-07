@@ -56,7 +56,7 @@ module DbSucker
       def refresh_screen
         @monitor.synchronize do
           @t += 1
-          update { __send__(:"_render_#{@view}") }
+          update { __send__(:"_view_#{@view}") }
         end
       rescue StandardError => ex
         update do
@@ -129,7 +129,7 @@ module DbSucker
       #   attron(color_pair(lc)|A_NORMAL) { addstr("]") }
       # end
 
-      def _render_status
+      def _view_status
         next_line
         attron(color_pair(COLOR_YELLOW)|A_NORMAL) { addstr("        Status: ") }
         attron(color_pair(self.class.const_get "COLOR_#{sklaventreiber.status[1].to_s.upcase.presence || "BLUE"}")|A_NORMAL) { addstr(sklaventreiber.status[0]) }
@@ -173,6 +173,10 @@ module DbSucker
         attron(color_pair(COLOR_YELLOW)|A_NORMAL) { addstr(" – ") }
         attron(color_pair(COLOR_BLUE)|A_NORMAL) { addstr("#{done}/#{total || "?"} workers done") }
 
+        _render_workers
+      end
+
+      def _render_workers
         if sklaventreiber.workers.any?
           next_line
           limit = lines - @l - 3 # @l starting at 0, 1 for blank line to come, placeholder
@@ -188,12 +192,12 @@ module DbSucker
               attron(color_pair(COLOR_YELLOW)|A_NORMAL) { addstr("… #{rest.length} more [#{part.join(", ")}]") }
               break
             end
-            _render_line(w)
+            _render_worker_line(w)
           end
         end
       end
 
-      def _render_line worker
+      def _render_worker_line worker
         next_line
         col1 = sklaventreiber.data[:window_col1]
         col2 = sklaventreiber.data[:window_col2]
@@ -224,6 +228,47 @@ module DbSucker
           attron(color_pair(COLOR_CYAN)|A_NORMAL) { addstr("[#{worker.step}/#{worker.perform.length}] ") }
         end
         attron(color_pair(self.class.const_get "COLOR_#{worker.status[1].to_s.upcase.presence || "BLUE"}")|A_NORMAL) { addstr(worker.status[0]) }
+      end
+
+      # used to render everything before exiting, can't fucking dump the pads I tried to implement -.-"
+      def _render_final_results
+        t_db, t_total, t_done = sklaventreiber.data[:database], sklaventreiber.data[:tables_transfer], sklaventreiber.data[:tables_done]
+        perc = t_total && t_done ? human_percentage(t_total.zero? ? 100 : t_done / t_total.to_f * 100) : "?"
+
+        puts
+        puts c("        Status: ") << c(sklaventreiber.status[0], sklaventreiber.status[1].presence || "red")
+        puts c("       Threads: ") << c("#{Thread.list.length} ".ljust(COL1, " "), :blue)
+        puts c("       Started: ") << c("#{@app.boot}", :blue) << c(" (") << c(human_seconds(Time.current - app.boot), :blue) << c(")")
+        puts c("Transaction ID: ") << c("#{sklaventreiber.trxid}", :cyan)
+        puts c("      Database: ") << c(t_db || "?", :magenta) << c(" (transferred ") << c(t_total || "?", :blue) << c(" of ") << c(t_done || "?", :blue) << c(" tables)")
+        puts c("      Progress: ") << c(perc, :green) << c(" – ") << c(t_total || "?", :blue) << c("#{t_done}/#{t_total || "?"} workers done", :blue)
+
+        if sklaventreiber.workers.any?
+          puts
+          enum = sklaventreiber.workers.sort_by{|w| [w.priority, w.table] }
+          enum.each do |worker|
+            col1 = sklaventreiber.data[:window_col1]
+            col2 = sklaventreiber.data[:window_col2]
+
+            puts "".tap{|res|
+              # status icon
+              res << case worker.state
+                when :pending then c("⊙", :black)
+                when :aquired then c("⊙", :white)
+                when :done then c("✔", :green)
+                when :failed then c("✘", :red)
+                when :canceled then c("⊘", :red)
+              end
+              # table
+              res << c(" #{worker.table}".ljust(col1 + 2, " "), :magenta) << c(" | ", :black)
+              # steps
+              res << c("[#{worker.step}/#{worker.perform.length}] ", :cyan) if worker.step
+              # status
+              res << c(worker.status[0], worker.status[1].presence || :blue)
+            }
+          end
+          puts
+        end
       end
     end
   end

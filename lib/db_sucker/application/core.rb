@@ -7,6 +7,7 @@ module DbSucker
         e = ["#{ex.class}: #{ex.message}"]
         ex.backtrace.each{|l| e << "\t#{l}" }
         error(e.join("\n"))
+        return false
       end
 
       def sync &block
