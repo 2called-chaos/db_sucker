@@ -1,7 +1,7 @@
 module DbSucker
   class Application
-    attr_reader :opts, :cfg
-    # attr_reader :opts, :threads, :ea_queue, :ip_queue, :hooks, :stats, :window, :boot, :db, :backbuffer, :triggers, :assessors, :delayed_ip_queue, :delayed_ip_queue_monitor
+    attr_reader :opts, :cfg, :sklaventreiber, :boot
+    # attr_reader :opts, :threads, :hooks, :stats, :window, :db, :backbuffer, :triggers, :assessors, :delayed_ip_queue, :delayed_ip_queue_monitor
     # attr_accessor :status
     # include Helper
     include Core
@@ -64,6 +64,15 @@ module DbSucker
         # log files
         log_keep: 10,                   # Amount of logfiles to keep
         log_size: 10240000,             # Max size of each logfile (in bytes)
+
+        # sklaven treiber
+        window_draw: true, # wether to refresh screen or not
+        window_refresh_delay: 0.25, # refresh screen every so many seconds
+        consumers: 10, # amount of workers to run at the same time
+
+        # amount of workers that can use a slot, false to disable
+        slot_deferred: 1,
+        # slot_sftp: false,
       }
       init_params
       yield(self)
@@ -110,7 +119,7 @@ module DbSucker
     end
 
     def core_tmp_path
-      File.expand_path(ENV["DBS_TMPDIR"] || ENV["TMPDIR"] || "/tmp")
+      "#{File.expand_path(ENV["DBS_TMPDIR"] || ENV["TMPDIR"] || "/tmp")}/db_sucker_temp"
     end
 
     def core_cfg_configfile

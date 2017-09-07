@@ -136,7 +136,7 @@ module DbSucker
         n.to_s.reverse.gsub(/...(?=.)/,'\&,').reverse
       end
 
-      def human_percentage(n, nn)
+      def human_percentage(n, nn = 2)
         "%.#{nn}f%%" % n
       end
 

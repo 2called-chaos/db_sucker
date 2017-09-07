@@ -1,16 +1,20 @@
 module DbSucker
   class Application
     module Core
-      def sandboxed logger = nil, &block
+      def sandboxed &block
         block.call
       rescue StandardError => ex
-        logger ||= error_logger
-        logger.error("#{ex.class}: #{ex.message}")
-        ex.backtrace.each{|l| logger.error("\t#{l}") }
+        e = ["#{ex.class}: #{ex.message}"]
+        ex.backtrace.each{|l| e << "\t#{l}" }
+        error(e.join("\n"))
       end
 
       def sync &block
         @monitor.synchronize(&block)
+      end
+
+      def uniqid
+        Digest::SHA1.hexdigest(SecureRandom.urlsafe_base64(128))
       end
       # def error_logger
       #   sync do
@@ -45,11 +49,11 @@ module DbSucker
       def trap_signals
         debug "Trapping INT signal..."
         Signal.trap("INT") do
-          $core_runtime_exiting = true
+          $core_runtime_exiting = 1
           Kernel.puts "Interrupting..."
         end
         Signal.trap("TERM") do
-          $core_runtime_exiting = true
+          $core_runtime_exiting = 2
           Kernel.puts "Terminating..."
         end
       end

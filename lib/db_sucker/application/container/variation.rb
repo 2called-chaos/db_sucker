@@ -32,7 +32,7 @@ module DbSucker
         end
 
         def tables_to_transfer
-          all = cfg.mysql_table_list(cfg.data["source"]["database"]).map(&:first)
+          all = cfg.table_list(cfg.data["source"]["database"]).map(&:first)
           keep = []
           if data["only"]
             [*data["only"]].each do |t|
@@ -50,7 +50,7 @@ module DbSucker
           end
           keep -= data["ignore_always"] if data["ignore_always"].is_a?(Array)
 
-          keep
+          [keep, all]
         end
 
         def constraint table

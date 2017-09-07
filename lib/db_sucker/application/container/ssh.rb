@@ -14,6 +14,7 @@ module DbSucker
           end
 
           def ssh_end
+            return unless @ssh
             debug "Closing SSH connection for identifier `#{name}'"
             @ssh.try(:close) rescue false
             debug "CLOSED SSH connection for identifier `#{name}'"
@@ -58,6 +59,7 @@ module DbSucker
           end
 
           def sftp_end
+            return unless @sftp
             debug "Closing SFTP connection for identifier `#{name}'"
             @sftp.try(:close) rescue false
             debug "CLOSED SFTP connection for identifier `#{name}'"

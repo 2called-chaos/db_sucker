@@ -131,7 +131,7 @@ module DbSucker
                 files = sftp.dir.glob("#{ctn.tmp_path}", "**/*")
               rescue Net::SFTP::StatusException => ex
                 if ex.message["no such file"]
-                  warning "Destination directory `#{ctn.tmp_path}' does not exist on the remote side!"
+                  abort "Destination directory `#{ctn.tmp_path}' does not exist on the remote side!"
                 else
                   raise
                 end
@@ -143,9 +143,8 @@ module DbSucker
               _dispatch_stat_tmp_display(d_files, d_directories, d_managed, cleanup, sftp)
             end
           else
-            tpath = "#{core_tmp_path}/db_sucker_tmp"
-            log c("Analyzing ") << c("local", :cyan) << c(" temp directory #{c tpath, :magenta}")
-            files = Dir.glob("#{tpath}/**/*")
+            log c("Analyzing ") << c("local", :cyan) << c(" temp directory #{c core_tmp_path, :magenta}")
+            files = Dir.glob("#{core_tmp_path}/**/*")
 
             managed_files = files
             d_files = files.select{|f| File.file?(f) }.map{|f| [f, File.size(f)] }
@@ -176,89 +175,22 @@ module DbSucker
 
       def _suck_variation identifier, ctn, variation, var
         if ctn && var
-          id = uniqid
-          trap_signals
-          ttt = var.tables_to_transfer
-          log "Transfering #{c ttt.count, :blue} #{c "tables from DB"} #{c ctn.data["source"]["database"], :magenta}#{c "..."}"
-          log "Transaction ID is #{c id, :blue}"
-
-          if ctn.tmp_path.present?
-            ctn.sftp_begin
-            begin
-              ctn.sftp_start do |sftp|
-                # check tmp directory
-                debug "Checking remote temp directory #{c ctn.tmp_path, :magenta}"
-                begin
-                  sftp.dir.glob("#{ctn.tmp_path}", "**/*")
-                rescue Net::SFTP::StatusException => ex
-                  if ex.message["no such file"]
-                    abort "Destination directory `#{ctn.tmp_path}' does not exist on the remote side!", 2
-                  else
-                    raise
-                  end
-                end
-              end
-
-              # starting workers
-              workers = []
-              ttt.each do |tab|
-                debug "Starting worker for table `#{tab}' (#{id})..."
-                workers << Configuration::Worker.new(self, id, ctn, var, tab)
-              end
-
-              # progess display
-              log ""
-              sleep 0.1
-              first_iteration = true
-              active_workers = []
-              all_workers = workers.dup
-              display = Thread.new do
-                while workers.any? || active_workers.any?(&:active?)
-                  # activate workers
-                  active_workers = active_workers.select(&:active?) if ttt.length > 20
-                  while active_workers.select(&:active?).count < 20 && workers.any?
-                    w = workers.shift
-                    w.start
-                    active_workers << w
-                  end
-
-                  # create deferred workers
-                  $deferred_import.synchronize do
-                    while $deferred_import.any?
-                      w = Configuration::Worker.new(self, *$deferred_import.shift)
-                      workers << w
-                      all_workers << w
-                    end
-                  end
-
-                  # render table
-                  render_progress_table(all_workers, workers, active_workers, !first_iteration)
-                  first_iteration = false
-                  sleep 0.5
-                end
-              end
-
-              # poll ssh
-              poll = Thread.new do
-                ctn.loop_ssh(0.1) { workers.any? || active_workers.any?(&:active?) }
-              end
-
-              display.join
-              poll.join
-
-              # finish up
-              render_progress_table(all_workers, workers, all_workers, true)
-              log ""
-              log c("All done", :green) unless Thread.main[:shutdown]
-            ensure
-              ctn.sftp_end
-            end
-          else
-            abort "Transfering streams is not yet implemented :( Please define a tmp_location in your source config.", 1
+          begin
+            stdout_was = @opts[:stdout]
+            @opts[:stdout] = SklavenTreiber::LogSpool.new
+            trap_signals
+            @sklaventreiber = SklavenTreiber.new(self, uniqid)
+            @sklaventreiber.whip_it!(ctn, var)
+          ensure
+            @opts[:stdout].spooldown do |meth, args, time|
+              stdout_was.send(meth, *args)
+            end if @opts[:stdout].respond_to?(:spooldown)
+            @opts[:stdout] = stdout_was
+            release_signals
+            log ""
+            log c("All done", :green) unless $core_runtime_exiting
           end
-
-          release_signals(true)
-          return
+          throw :dispatch_handled
         end
       end
 

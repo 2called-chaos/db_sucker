@@ -45,6 +45,10 @@ require "db_sucker/application/container/ssh"
 require "db_sucker/application/container/variation"
 require "db_sucker/application/container"
 require "db_sucker/application/dispatch"
+require "db_sucker/application/sklaven_treiber/log_spool"
+require "db_sucker/application/sklaven_treiber/worker"
+require "db_sucker/application/sklaven_treiber"
+require "db_sucker/application/window"
 require "db_sucker/application"
 
 # module DbSucker
