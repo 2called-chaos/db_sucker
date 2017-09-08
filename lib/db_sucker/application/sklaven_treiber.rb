@@ -39,7 +39,7 @@ module DbSucker
           raise ArgumentError, "Only one of `--only' or `--except' option can be provided at the same time"
         elsif @app.opts[:suck_only].any?
           unless (r = @app.opts[:suck_only] - at).empty?
-            raise ArgumentError, "Unknown database(s) `#{r * ", "}' could not be found"
+            raise ArgumentError, "The table(s) `#{r * ", "}' for the database `#{ctn.source["database"]}' could not be found, #{at}"
           end
           ttt = @app.opts[:suck_only]
         elsif @app.opts[:suck_except].any?
