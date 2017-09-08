@@ -102,7 +102,7 @@ module DbSucker
               keep.delete(t)
             end
           else
-            keep = all
+            keep = all.dup
           end
           keep -= data["ignore_always"] if data["ignore_always"].is_a?(Array)
 
