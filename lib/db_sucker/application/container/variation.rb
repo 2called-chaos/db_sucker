@@ -163,12 +163,13 @@ module DbSucker
           if imp == "void10"
             t = channelfy_thread Thread.new{ sleep 10 }
           elsif imp == "sequel" || constraint(worker.table)
-            imp_was_sequel = imp == "sequel"
-            imp = "sequel"
-            t = channelfy_thread Thread.new {
-              Thread.current[:importer] = imp = SequelImporter.new(worker, file, ignore_errors: !imp_was_sequel)
-              imp.start
-            }
+            raise NotImplementedError, "SequelImporter is not yet implemented/ported to new db_sucker version!"
+            # imp_was_sequel = imp == "sequel"
+            # imp = "sequel"
+            # t = channelfy_thread Thread.new {
+            #   Thread.current[:importer] = imp = SequelImporter.new(worker, file, ignore_errors: !imp_was_sequel)
+            #   imp.start
+            # }
           elsif imp == "binary"
             t = channelfy_thread Thread.new{
               cmd = load_command_for(file, impf.merge(dirty: impf[:dirty] && worker.deferred))
