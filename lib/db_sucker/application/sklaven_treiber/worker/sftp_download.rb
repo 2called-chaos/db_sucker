@@ -14,6 +14,7 @@ module DbSucker
             @local = fd.values[0]
             @status_format = :off
             @read_size = 5 * 1024 * 1024
+            @abort_if = Proc.new { false }
             reset_state
           end
 
@@ -24,6 +25,10 @@ module DbSucker
             @state = :idle
             @offset = 0
             @last_offset = 0
+          end
+
+          def abort_if &block
+            @abort_if = block
           end
 
           def status_format= which
@@ -46,8 +51,12 @@ module DbSucker
               @ctn.sftp_start(opts[:force_new_connection]) do |sftp|
                 @filesize = sftp.lstat!(@remote).size
                 sftp.download!(@remote, @local, read_size: opts[:read_size]) do |event, downloader, *args|
-                  if $core_runtime_exiting && !@closing
+                  if !@closing && @abort_if.call(self, event, downloader, *args)
+                    # does cancel future operations but will not cancel current download :/
                     downloader.abort!
+                    # so we kill it manually
+                    #
+                    # set closing state
                     @closing = true
                   end
 
@@ -89,17 +98,14 @@ module DbSucker
                 break
               end
               case @state
-              when :idle
+              when :idle, :init
                 r << "downloading:"
-                r << "initiating..."
-              when :init
-                r << "downloading:"
-                r << "initiating..."
+                r << " initiating..."
               when :finishing
                 r << "downloading:"
-                r << "finishing..."
+                r << " finishing..."
               when :done
-                r << "download complete: 100% – #{human_bytes @filesize}"
+                r << "download #{@offset == @filesize ? "complete" : "INCOMPLETE"}: #{f_percentage(@offset, @filesize)} – #{human_bytes @offset}/#{human_bytes @filesize}"
               when :downloading
                 bytes_remain = @filesize - @offset
                 if @last_time
@@ -155,14 +161,21 @@ module DbSucker
               case _this.state
               when :idle, :init
                 attron(color_pair(Window::COLOR_BLUE)|Window::A_BOLD) { addstr("downloading: ") }
-                attron(color_pair(Window::COLOR_GRAY)|Window::A_BOLD) { addstr("initiating...") }
+                attron(color_pair(Window::COLOR_GRAY)|Window::A_BOLD) { addstr(" initiating...") }
               when :finishing
                 attron(color_pair(Window::COLOR_BLUE)|Window::A_BOLD) { addstr("downloading: ") }
-                attron(color_pair(Window::COLOR_GRAY)|Window::A_BOLD) { addstr("finishing...") }
+                attron(color_pair(Window::COLOR_GRAY)|Window::A_BOLD) { addstr(" finishing...") }
               when :done
-                attron(color_pair(Window::COLOR_GREEN)|Window::A_BOLD) { addstr("download complete: 100%") }
-                attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr(" – ") }
-                attron(color_pair(Window::COLOR_CYAN)|Window::A_BOLD) { addstr("#{human_bytes _this.filesize}") }
+                fperc = f_percentage(_this.offset, _this.filesize)
+                if _this.offset == _this.filesize
+                  attron(color_pair(Window::COLOR_GREEN)|Window::A_BOLD) { addstr("download complete: #{fperc}") }
+                  attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr(" – ") }
+                  attron(color_pair(Window::COLOR_CYAN)|Window::A_BOLD) { addstr("#{human_bytes _this.offset}") }
+                else
+                  attron(color_pair(Window::COLOR_RED)|Window::A_BOLD) { addstr("download INCOMPLETE: #{fperc}") }
+                  attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr(" – ") }
+                  attron(color_pair(Window::COLOR_CYAN)|Window::A_BOLD) { addstr("#{human_bytes _this.offset}/#{human_bytes _this.filesize}") }
+                end
               when :downloading
                 bytes_remain = _this.filesize - _this.offset
                 if _this.last_time
@@ -173,7 +186,7 @@ module DbSucker
                 else
                   offset_diff = 0
                   bps = 0
-                  eta = "???"
+                  eta = "?:??:??"
                 end
 
                 attron(color_pair(Window::COLOR_BLUE)|Window::A_BOLD) { addstr("downloading: ") }
@@ -205,30 +218,9 @@ module DbSucker
                 _this.last_time = Time.now
               end
             end
-
-            # def progress_bar label, is, max, maxlength = nil
-            #   cr = maxlength || (cols-1)
-            #   cr -= label.length + 1
-
-            #   lp = is.to_f / max * 100
-            #   lps = " #{app.human_number(is)}/#{app.human_number(max)} – #{app.human_percentage(lp, 0)}"
-            #   cr -= lps.length + 1 if cr > lps.length
-
-            #
-            #   crr = (cr.to_f * (lp / 100)).ceil.to_i
-
-            #   attron(color_pair(COLOR_YELLOW)|A_NORMAL) { addstr("#{label} ") }
-            #   attron(color_pair(lc)|A_NORMAL) { addstr("[") }
-            #   attron(color_pair(lc)|A_NORMAL) { addstr("".ljust(crr, "|")) }
-            #   attron(color_pair(COLOR_GRAY)|A_NORMAL) { addstr("".ljust(cr - crr, "-")) }
-            #   attron(color_pair(COLOR_GRAY)|A_NORMAL) { addstr(lps) }
-            #
-            # end
           end
         end
       end
     end
   end
 end
-
-__END__

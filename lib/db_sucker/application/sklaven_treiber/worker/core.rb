@@ -29,7 +29,7 @@ module DbSucker
               reason ||= @should_cancel if @should_cancel.is_a?(String)
               @should_cancel = false
               @state = :canceled
-              @status = ["CANCELED#{" (was #{reason})" if reason}", "red"]
+              @status = ["CANCELED#{" (was #{reason.to_s.gsub("[CLOSING] ", "")})" if reason}", "red"]
               throw :abort_execution, true if abort
               true
             end

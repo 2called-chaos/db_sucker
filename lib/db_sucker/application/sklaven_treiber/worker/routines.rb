@@ -49,6 +49,7 @@ module DbSucker
             sftp_download(@ctn, @cfile => @lfile) do |dl|
               dl.status_format = :full
               @status = [dl, "yellow"]
+              dl.abort_if { @should_cancel }
               dl.download!
             end
           end
