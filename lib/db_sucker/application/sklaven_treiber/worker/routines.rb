@@ -38,7 +38,7 @@ module DbSucker
             @remote_files_to_remove << @cfile
             channel, result = cr
             second_progress(channel, "compressing file for transfer (:seconds)...").join
-            @remote_files_to_remove.delete(@ffile)
+            @remote_files_to_remove.delete(@ffile) unless @should_cancel
           end
 
           def _download_file

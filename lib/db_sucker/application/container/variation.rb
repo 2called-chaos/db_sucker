@@ -121,7 +121,7 @@ module DbSucker
 
         def compress_file file, blocking = true
           cmd = %{gzip #{file}}
-          ["#{file}.gz", cfg.blocking_channel_result(cmd, channel: true, blocking: blocking)]
+          ["#{file}.gz", cfg.blocking_channel_result(cmd, channel: true, request_pty: true, blocking: blocking)]
         end
 
         def channelfy_thread t
