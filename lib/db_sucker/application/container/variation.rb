@@ -116,7 +116,7 @@ module DbSucker
         def dump_to_remote worker, blocking = true
           cmd = dump_command_for(worker.table)
           cmd << " > #{worker.tmp_filename(true)}"
-          [worker.tmp_filename(true), cfg.blocking_channel_result(cmd, channel: true, blocking: blocking)]
+          [worker.tmp_filename(true), cfg.blocking_channel_result(cmd, channel: true, request_pty: true, blocking: blocking)]
         end
 
         def compress_file file, blocking = true

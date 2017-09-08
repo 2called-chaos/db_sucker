@@ -111,23 +111,33 @@ module DbSucker
           end
 
           def blocking_channel_result cmd, opts = {}
-            opts = opts.reverse_merge(ssh: nil, blocking: true, channel: false)
+            opts = opts.reverse_merge(ssh: nil, blocking: true, channel: false, request_pty: false)
             result = []
             chan = send(opts[:blocking] ? :blocking_channel : :nonblocking_channel, opts[:ssh]) do |ch|
-              ch.exec(cmd) do |ch, success|
-                raise "could not execute command" unless success
+              chproc = ->(ch, cmd, result) {
+                ch.exec(cmd) do |ch, success|
+                  raise "could not execute command" unless success
 
-                # "on_data" is called when the process writes something to stdout
-                ch.on_data do |c, data|
-                  result << data
+                  # "on_data" is called when the process writes something to stdout
+                  ch.on_data do |c, data|
+                    result << data
+                  end
+
+                  # "on_extended_data" is called when the process writes something to stderr
+                  ch.on_extended_data do |c, type, data|
+                    result << data
+                  end
+
+                  ch.on_close { }
                 end
-
-                # "on_extended_data" is called when the process writes something to stderr
-                ch.on_extended_data do |c, type, data|
-                  result << data
+              }
+              if opts[:request_pty]
+                ch.request_pty do |ch, success|
+                  raise "could not obtain pty" unless success
+                  chproc.call(ch, cmd, result)
                 end
-
-                ch.on_close { }
+              else
+                chproc.call(ch, cmd, result)
               end
             end
             opts[:channel] ? [chan, result] : result
