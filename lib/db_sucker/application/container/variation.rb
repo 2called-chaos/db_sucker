@@ -96,7 +96,7 @@ module DbSucker
               keep << t
             end
           elsif data["except"]
-            keep = all
+            keep = all.dup
             [*data["except"]].each do |t|
               raise "unknown table `#{t}' for variation `#{cfg.name}/#{name}' in #{cfg.src}" unless all.include?(t)
               keep.delete(t)
