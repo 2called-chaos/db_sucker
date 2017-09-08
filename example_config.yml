@@ -22,32 +22,38 @@ my_identifier:
       tmp_location: /home/my_dump_user/db_sucker_tmp
 
     # Remote database settings. DON'T limit tables via arguments!
+    adapter: mysql2 # only mysql is supported at the moment
     hostname: 127.0.0.1
     username: my_dump_user
     password: my_secret
     database: my_database
     args: --single-transaction # for innoDB
+    client_binary: mysql # used to query remote server
+    dump_binary: mysqldump # used to dump on remote server
 
   # define as many variations here as you want.
   variations:
     # define your local database settings, args will be passed to the `mysql` command for import.
-    all:
+    default:
+      adapter: mysql2 # only mysql is supported at the moment
       database: tomatic
       hostname: localhost
       username: root
       password:
       args:
+      client_binary: mysql # used to query/import locally
 
     # you can inherit all settings from another variation with the `base` setting.
     quick:
-      base: all
+      base: default
+      label: "This goes quick, I promise"
       only: [this_table, and_that_table]
 
     # you can use `only` or `except` to limit the tables you want to suck but not both at the same time.
     # there is also an option `ignore_always` for tables which you never want to pull (intended for base variation)
     # so that you don't need to repeat them in your except statements (which overwrites, no merge here)
     unheavy:
-      base: all
+      base: default
       except: [orders, order_items, activities]
       ignore_always: [schema_migrations]
 
@@ -63,7 +69,7 @@ my_identifier:
     #    :id         981f8e2f278fa7f029399996b02e869ed8fd7709
     #    :combined   :datetime_-_:table
     with_copy:
-      base: all
+      base: default
       file: ~/Desktop/:date_:id_:table.sql.gz
       gzip: true
 
@@ -73,12 +79,15 @@ my_identifier:
       database: false
 
     # You may use a different importer. Currently there are the following:
-    #   default    Use `mysql' executable
-    #   dirty      Use `mysql' executable with dirty speedups (only deferred)
+    #   binary     Use `dump_binary' executable
     #   void10     Sleep 10 seconds and do nothing (for testing/development)
+    #
+    # Mysql adapter supports the following flags for binary importer
+    #   +dirty     Use `mysql' executable with dirty speedups (only deferred)
     dirty:
-      base: all
-      importer: dirty
+      base: default
+      importer: binary
+      importer_flags: +dirty
 
     # limit data by passing SQL constraints to mysqldump
     # WARNING:
@@ -89,7 +98,7 @@ my_identifier:
     #     - import will be performed by a ruby implementation (using Sequel)
     #     - import will ignore records that violate indices (or duplicate IDs)
     recent_orders:
-      base: all
+      base: default
       only: [orders, order_items]
       constraints:
         last_week: &last_week "created_at > date_sub(now(), INTERVAL 7 DAY)"
@@ -109,7 +118,7 @@ my_identifier:
     #   - records removed on the remote will still be there locally
     #   - this is just for the lazy and impatient of us!
     eeekkksss:
-      base: all
+      base: default
       except: [table_without_id_column]
       incremental: true
       incremental_columns: # in case you want to override the `id' column per table (default is id)

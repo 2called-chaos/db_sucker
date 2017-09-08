@@ -9,7 +9,7 @@ module DbSucker
         end
 
         def local_client_binary
-          source["client_binary"] || "mysql"
+          data["client_binary"] || "mysql"
         end
 
         def dump_binary
