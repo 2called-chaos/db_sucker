@@ -4,10 +4,12 @@ module DbSucker
       class Worker
         module IO
           class FileCopy < Base
+            attr_accessor :use_tmp
 
             def init
               @label ||= "copying"
               @entity ||= "copy"
+              @use_tmp = true
             end
 
             def copy! opts = {}
@@ -17,8 +19,9 @@ module DbSucker
               try = 1
               begin
                 reset_state
+                @tmploc   = @use_tmp ? "#{@local}.tmp" : @local
                 @in_file  = File.new(@remote, "rb")
-                @out_file = File.new(@local, "wb")
+                @out_file = File.new(@tmploc, "wb")
                 @filesize = @in_file.size
 
                 buf = ""
@@ -38,6 +41,11 @@ module DbSucker
 
                 @in_file.close
                 @out_file.close
+
+                if @use_tmp
+                  FileUtils.mv(@tmploc, @local)
+                end
+
                 @state = :done
               rescue StandardError => ex
                 @operror = "##{try} #{ex.class}: #{ex.message}"
