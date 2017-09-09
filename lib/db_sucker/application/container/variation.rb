@@ -43,6 +43,10 @@ module DbSucker
           data["incremental"] || {}
         end
 
+        def gzip_binary
+          source["gzip_binary"] || "gzip"
+        end
+
         # ===========
         # = RPC API =
         # ===========
@@ -120,7 +124,7 @@ module DbSucker
         end
 
         def compress_file file, blocking = true
-          cmd = %{gzip #{file}}
+          cmd = %{#{gzip_binary} #{file}}
           ["#{file}.gz", cfg.blocking_channel_result(cmd, channel: true, request_pty: true, blocking: blocking)]
         end
 

@@ -28,8 +28,11 @@ my_identifier:
     password: my_secret
     database: my_database
     args: --single-transaction # for innoDB
+
+    # Binaries to be used (normally there is no need to change these)
     client_binary: mysql # used to query remote server
     dump_binary: mysqldump # used to dump on remote server
+    gzip_binary: gzip # used to compress file on remote server
 
   # define as many variations here as you want.
   variations:
