@@ -4,7 +4,6 @@ module DbSucker
       class Worker
         module IO
           class FileCopy < Base
-            attr_accessor :label
 
             def init
               @label ||= "copying"
