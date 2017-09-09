@@ -23,10 +23,11 @@ module DbSucker
             perform << "r_calculate_compressed_hash" if ctn.integrity?
             perform << "l_download_file"
             perform << "l_verify_compressed_hash" if ctn.integrity?
-            perform << "l_copy_file" if var.data["file"]
+            perform << "l_copy_file" if var.copies_file? && var.copies_file_compressed?
             if var.requires_uncompression?
               perform << "l_decompress_file"
               perform << "l_verify_raw_hash" if ctn.integrity?
+              perform << "l_copy_file" if var.copies_file? && !var.copies_file_compressed?
               perform << "l_import_file" if var.data["database"]
             end
           end
