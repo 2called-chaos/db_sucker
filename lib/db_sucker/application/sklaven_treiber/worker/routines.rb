@@ -115,7 +115,6 @@ module DbSucker
                 @local_files_to_remove.delete(@local_file_compressed)
                 @local_file_raw = fc.local
                 @local_files_to_remove << @local_file_raw
-                debug fc
               end
               fc.gunzip!
             end
