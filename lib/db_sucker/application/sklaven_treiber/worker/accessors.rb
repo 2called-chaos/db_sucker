@@ -59,7 +59,7 @@ module DbSucker
             "#{local_tmp_path}/#{file}"
           end
 
-          def copy_file_destination srcfile, dstfile
+          def copy_file_destination dstfile
             d, dt = Time.current.strftime("%Y-%m-%d"), Time.current.strftime("%H-%M-%S")
 
             File.expand_path dstfile.dup
