@@ -83,14 +83,11 @@ module DbSucker
           end
 
           def _l_copy_file file = nil
-            return unless var.copies_file?
-            return if !file && !var.copies_file_compressed?
-
-            label = "copying #{@delay_copy_file ? "raw" : "gzipped"} file"
+            label = "copying #{var.copies_file_compressed? ? "gzipped" : "raw"} file"
             @status = ["#{label}...", :yellow]
 
-            @copy_file_source = file || @local_file_compressed
-            @copy_file_target = copy_file_destination(@copy_file_source, var.data["file"])
+            @copy_file_source = var.copies_file_compressed? ? @local_file_compressed : @local_file_raw
+            @copy_file_target = copy_file_destination(var.data["file"])
 
             file_copy(@ctn, @copy_file_source => @copy_file_target) do |fc|
               fc.label = label
@@ -110,7 +107,6 @@ module DbSucker
             @local_files_to_remove << @local_file_raw
             second_progress(channel, "decompressing file (:seconds)...").join
             @local_files_to_remove.delete(@local_file_compressed)
-            _copy_file(@local_file_raw) if !@should_cancel && @delay_copy_file
           end
 
           def _l_verify_raw_hash
