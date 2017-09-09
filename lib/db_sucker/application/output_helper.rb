@@ -144,8 +144,7 @@ module DbSucker
         "%.#{nn}f%%" % n
       end
 
-      def human_seconds secs
-        secs = secs.to_i
+      def human_seconds secs, sprec = 0
         t_minute = 60
         t_hour = t_minute * 60
         t_day = t_hour * 24
@@ -154,36 +153,36 @@ module DbSucker
         t_year = t_month * 12
         "".tap do |r|
           if secs >= t_year
-            r << "#{secs / t_year}y "
+            r << "#{"%i" % (secs / t_year)}y "
             secs = secs % t_year
           end
 
           if secs >= t_month
-            r << "#{secs / t_month}m "
+            r << "#{"%i" % (secs / t_month)}m "
             secs = secs % t_month
           end
 
           if secs >= t_week
-            r << "#{secs / t_week}w "
+            r << "#{"%i" % (secs / t_week)}w "
             secs = secs % t_week
           end
 
           if secs >= t_day || !r.blank?
-            r << "#{secs / t_day}d "
+            r << "#{"%i" % (secs / t_day)}d "
             secs = secs % t_day
           end
 
           if secs >= t_hour || !r.blank?
-            r << "#{secs / t_hour}h "
+            r << "#{"%i" % (secs / t_hour)}h "
             secs = secs % t_hour
           end
 
           if secs >= t_minute || !r.blank?
-            r << "#{secs / t_minute}m "
+            r << "#{"%i" % (secs / t_minute)}m "
             secs = secs % t_minute
           end
 
-          r << "#{secs}s" unless r.include?("d")
+          r << "#{"%.#{sprec}f" % secs}s" unless r.include?("d")
         end.strip
       end
 

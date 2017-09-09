@@ -7,7 +7,7 @@ module DbSucker
         include Helpers
         include Routines
 
-        attr_reader :exception, :ctn, :var, :table, :thread, :monitor, :step, :perform, :should_cancel, :sklaventreiber
+        attr_reader :exception, :ctn, :var, :table, :thread, :monitor, :step, :perform, :should_cancel, :sklaventreiber, :timings
         OutputHelper.hook(self)
 
         def initialize sklaventreiber, ctn, var, table
@@ -16,6 +16,7 @@ module DbSucker
           @var = var
           @table = table
           @monitor = Monitor.new
+          @timings = {}
           @perform = %w[].tap do |perform|
             perform << "r_dump_file"
             perform << "r_calculate_raw_hash" if ctn.integrity?

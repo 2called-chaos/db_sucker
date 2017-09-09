@@ -59,7 +59,7 @@ module DbSucker
                 current_perform = m
                 _cancelpoint @status[0], true
                 @step = i + 1
-                send(:"_#{m}")
+                @timings[m] = Benchmark.realtime { send(:"_#{m}") }
               end
               @status = ["DONE (#{runtime})", "green"]
             end
@@ -83,6 +83,9 @@ module DbSucker
 
             @ended = Time.current
             @state = :done if !canceled? && !failed?
+
+            # debug timings
+            debug "[Timings(#{table})] all: #{human_seconds(@timings.values.sum, 3)}, #{@timings.map{|a,t| "#{a}: #{human_seconds(t, 3)}" } * ", "}", 50
           end
         end
       end
