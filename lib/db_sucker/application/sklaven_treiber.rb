@@ -113,7 +113,6 @@ module DbSucker
           cnum.times do |wi|
             @status = ["starting consumer #{wi+1}/#{cnum}", "blue"]
             @threads << Thread.new {
-              Thread.current.abort_on_exception = true
               Thread.current[:managed_worker] = wi
               sleep 0.1 until Thread.current[:start] || $core_runtime_exiting
               _queueoff

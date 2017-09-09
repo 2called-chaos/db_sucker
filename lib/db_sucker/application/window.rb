@@ -21,7 +21,6 @@ module DbSucker
 
       def start_loop refresh_delay
         @loop = Thread.new do
-          Thread.current.abort_on_exception = true
           loop do
             break if Thread.current[:stop]
             refresh_screen if app.opts[:window_draw]
