@@ -47,8 +47,10 @@ module DbSucker
                     end
                   end
                 end
+                @on_success.call(self)
               rescue Net::SSH::Disconnect => ex
                 @operror = "##{try} #{ex.class}: #{ex.message}"
+                @on_error.call(self, ex, @operror)
                 try += 1
                 sleep 3
                 if try > opts[:tries]
@@ -56,6 +58,8 @@ module DbSucker
                 else
                   retry
                 end
+              ensure
+                @on_complete.call(self)
               end
             end
           end

@@ -16,6 +16,9 @@ module DbSucker
               @status_format = :off
               @read_size = 5 * 1024 * 1024
               @abort_if = Proc.new { false }
+              @on_error = Proc.new {}
+              @on_complete = Proc.new {}
+              @on_success = Proc.new {}
               init
               reset_state
             end
@@ -33,6 +36,18 @@ module DbSucker
 
             def abort_if &block
               @abort_if = block
+            end
+
+            def on_error &block
+              @on_error = block
+            end
+
+            def on_complete &block
+              @on_complete = block
+            end
+
+            def on_success &block
+              @on_success = block
             end
 
             def status_format= which
