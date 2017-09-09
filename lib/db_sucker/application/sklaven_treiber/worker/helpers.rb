@@ -37,7 +37,7 @@ module DbSucker
                   channel.close rescue false
                   Thread.current[:canceled] = true
                 end
-                stat = status.gsub(":seconds", human_seconds(Thread.current[:iteration]))
+                stat = status.gsub(":seconds", human_seconds(Thread.current[:iteration]/10))
                 stat = stat.gsub(":workers", channel[:workers].to_s.presence || "?") if is_thread
                 if channel[:error_message]
                   @status = ["[ERROR] #{channel[:error_message]}", :red]
@@ -49,7 +49,7 @@ module DbSucker
                   @status = [stat, color]
                 end
                 break unless channel.active?
-                sleep 1
+                sleep 0.1
                 Thread.current[:iteration] += 1
               end
             end
