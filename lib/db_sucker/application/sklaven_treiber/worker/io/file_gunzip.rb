@@ -31,7 +31,7 @@ module DbSucker
                 gz = Zlib::GzipReader.new(@in_file)
                 begin
                   while buf = gz.read(opts[:read_size])
-                    @offset += buf.bytesize
+                    @offset += [opts[:read_size], @filesize - @offset].min
                     @out_file.syswrite(buf)
                   end
                 ensure
