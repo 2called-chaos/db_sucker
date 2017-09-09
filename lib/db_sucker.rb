@@ -1,6 +1,3 @@
-STDIN.sync = true
-STDOUT.sync = true
-
 # stdlib
 require "benchmark"
 require "optparse"
@@ -28,14 +25,6 @@ begin ; require "pry" ; rescue LoadError ; end
 
 # lib
 require "db_sucker/version"
-# require "banana/logger"
-# require "db_sucker/helpers"
-# require "db_sucker/application/logger_client"
-# require "db_sucker/sequel_importer"
-# require "db_sucker/configuration/worker"
-# require "db_sucker/configuration/rpc"
-# require "db_sucker/configuration/container"
-# require "db_sucker/configuration/variation"
 require "db_sucker/patches/net-sftp"
 require "db_sucker/adapters/mysql2"
 require "db_sucker/application/colorize"
@@ -58,8 +47,3 @@ require "db_sucker/application/sklaven_treiber/worker"
 require "db_sucker/application/sklaven_treiber"
 require "db_sucker/application/window"
 require "db_sucker/application"
-
-# module DbSucker
-#   ROOT = Pathname.new(File.expand_path("../..", __FILE__))
-#   BASH_ENABLED = "#{ENV["SHELL"]}".downcase["bash"]
-# end

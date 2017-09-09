@@ -1,6 +1,9 @@
 #!/usr/bin/env ruby
 require "db_sucker"
 begin
+  STDIN.sync = true
+  STDOUT.sync = true
+
   Process.setproctitle("db_sucker")
   DbSucker::Application.dispatch(ENV, ARGV)
 rescue Interrupt
