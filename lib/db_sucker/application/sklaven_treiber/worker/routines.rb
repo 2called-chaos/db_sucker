@@ -92,6 +92,9 @@ module DbSucker
             file_copy(@ctn, @copy_file_source => @copy_file_target) do |fc|
               fc.label = label
               fc.status_format = :full
+              fc.integrity do |f|
+                var.calculate_local_integrity_hash(f)[1].join.split(" ").first.try(:strip).presence
+              end if var.integrity?
               @status = [fc, "yellow"]
               fc.abort_if { @should_cancel }
               fc.copy!

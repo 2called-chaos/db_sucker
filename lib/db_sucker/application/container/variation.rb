@@ -191,7 +191,7 @@ module DbSucker
         def calculate_local_integrity_hash file, blocking = true
           return unless integrity?
           cmd = "#{integrity} #{file}"
-          [cmd, local_execute(cmd, thread: true, blocking: blocking, close_stdin: true)]
+          [cmd, local_execute(cmd, thread: !blocking, blocking: blocking, close_stdin: true)]
         end
 
 
