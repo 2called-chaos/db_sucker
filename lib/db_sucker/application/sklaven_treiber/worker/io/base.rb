@@ -11,8 +11,8 @@ module DbSucker
 
             def initialize ctn, fd
               @ctn = ctn
-              @remote = fd.keys[0]
-              @local = fd.values[0]
+              @remote = fd.is_a?(Hash) ? fd.keys[0] : fd
+              @local = fd.values[0] if fd.is_a?(Hash)
               @status_format = :off
               @read_size = 5 * 1024 * 1024
               @abort_if = Proc.new { false }
