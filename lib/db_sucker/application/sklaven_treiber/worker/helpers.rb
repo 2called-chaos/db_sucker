@@ -21,6 +21,12 @@ module DbSucker
             end
           end
 
+          def file_gunzip *args, &block
+            IO::FileGunzip.new(*args).tap do |fc|
+              block.try(:call, fc)
+            end
+          end
+
           def second_progress channel, status, color = :yellow, is_thread = false, initial = 0
             Thread.new do
               Thread.current[:iteration] = initial

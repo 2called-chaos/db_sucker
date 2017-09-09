@@ -102,14 +102,23 @@ module DbSucker
           end
 
           def _l_decompress_file
-            @status = ["decompressing file...", "yellow"]
-            sleep 3
-            return
+            label = "decompressing file"
+            @status = ["#{label}...", :yellow]
 
-            @local_file_raw, channel = var.decompress_file(@local_file_compressed)
-            @local_files_to_remove << @local_file_raw
-            second_progress(channel, "decompressing file (:seconds)...").join
-            @local_files_to_remove.delete(@local_file_compressed)
+            file_gunzip(@ctn, @local_file_compressed) do |fc|
+              fc.label = label
+              fc.status_format = :full
+              @status = [fc, "yellow"]
+
+              fc.abort_if { @should_cancel }
+              fc.on_success do
+                @local_files_to_remove.delete(@local_file_compressed)
+                @local_file_raw = fc.local
+                @local_files_to_remove << @local_file_raw
+                debug fc
+              end
+              fc.gunzip!
+            end
           end
 
           def _l_verify_raw_hash
@@ -130,20 +139,15 @@ module DbSucker
           end
 
           def _l_import_file
-            if var.data["database"]
-              @status = ["loading file into local SQL server...", "yellow"]
+            cancel!("importing not yet implemented", true)
+            if File.size(@local_file_raw) > 50_000_000 && app.opts[:deferred_import]
+              @local_files_to_remove.delete(@local_file_raw)
+              $deferred_import << [id, ctn, var, table, @local_file_raw]
+              @status = ["Deferring import of large file (#{human_filesize(File.size(@local_file_raw))})...", :green]
+              @got_deferred = true
               sleep 3
-              return
-
-              if File.size(@local_file_raw) > 50_000_000 && app.opts[:deferred_import]
-                @local_files_to_remove.delete(@local_file_raw)
-                $deferred_import << [id, ctn, var, table, @local_file_raw]
-                @status = ["Deferring import of large file (#{human_filesize(File.size(@local_file_raw))})...", :green]
-                @got_deferred = true
-                sleep 3
-              else
-                _do_import_file(@local_file_raw)
-              end
+            else
+              _do_import_file(@local_file_raw)
             end
           end
 

@@ -5,7 +5,7 @@ module DbSucker
         module IO
           class Base
             STATUS_FORMATTERS = [:none, :minimal, :full]
-            attr_reader :status_format, :state, :operror, :filesize, :offset, :closing
+            attr_reader :status_format, :state, :operror, :filesize, :offset, :closing, :local, :remote, :ctn
             attr_accessor :read_size, :last_offset, :last_time, :label, :entity
             OutputHelper.hook(self)
 
@@ -152,7 +152,7 @@ module DbSucker
                     attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr(" – ") }
                     attron(color_pair(Window::COLOR_CYAN)|Window::A_BOLD) { addstr("#{human_bytes _this.offset}/#{human_bytes _this.filesize}") }
                   end
-                when :downloading, :copying
+                when :downloading, :copying, :decompressing
                   bytes_remain = _this.filesize - _this.offset
                   if _this.last_time
                     offset_diff = _this.offset - _this.last_offset

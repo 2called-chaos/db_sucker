@@ -204,12 +204,6 @@ module DbSucker
 
 
 
-        def decompress_file file
-          cmd = %{gunzip #{file}}
-          t = channelfy_thread(Thread.new{ system("#{cmd}") })
-          [file[0..-4], t]
-        end
-
         def wait_for_workers
           channelfy_thread Thread.new {
             loop do
