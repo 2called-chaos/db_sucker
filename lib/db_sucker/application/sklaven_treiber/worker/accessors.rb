@@ -40,7 +40,7 @@ module DbSucker
           end
 
           def descriptive
-            "#{ctn.source_database}-#{table}"
+            "#{ctn.source["database"]}-#{table}"
           end
 
           def identifier
@@ -48,7 +48,7 @@ module DbSucker
           end
 
           def tmp_filename tmp_suffix = false
-            "#{ctn.tmp_path}/#{trxid}_#{ctn.source_database}_#{table}.dbsc#{".tmp" if tmp_suffix}"
+            "#{ctn.tmp_path}/#{trxid}_#{ctn.source["database"]}_#{table}.dbsc#{".tmp" if tmp_suffix}"
           end
 
           def local_tmp_path

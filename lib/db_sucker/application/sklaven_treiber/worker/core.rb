@@ -68,7 +68,7 @@ module DbSucker
             @status = ["FAILED (#{ex.message})", "red"]
             @state = :failed
             Thread.main[:app].sync do
-              error "SklavenTreiber::Worker encountered an error in `#{current_perform}' (ctn: #{ctn.name}, var: #{var.name}, db: #{ctn.source_database}, table: #{table})"
+              error "SklavenTreiber::Worker encountered an error in `#{current_perform}' (ctn: #{ctn.name}, var: #{var.name}, db: #{ctn.source["database"]}, table: #{table})"
               warn c("\t#{ex.class}: #{ex.message}", :red)
               ex.backtrace.each{|l| warn c("\t  #{l}", :red) }
             end

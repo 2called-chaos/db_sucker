@@ -91,10 +91,6 @@ module DbSucker
         ctn.data["source"]
       end
 
-      def source_database
-        source["database"]
-      end
-
       def tmp_path
         source["ssh"]["tmp_location"].presence || "/tmp/db_sucker_tmp"
       end

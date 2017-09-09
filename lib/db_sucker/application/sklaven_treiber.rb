@@ -46,7 +46,7 @@ module DbSucker
           ttt = ttt - @app.opts[:suck_except]
         end
 
-        @data[:database] = ctn.source_database
+        @data[:database] = ctn.source["database"]
         @data[:tables_transfer] = ttt.length
         @data[:window_col1] = ttt.map(&:length).max
         @data[:tables_total] = at.length
