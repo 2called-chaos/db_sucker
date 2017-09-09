@@ -10,6 +10,14 @@ module DbSucker
         return false
       end
 
+      def notify_exception label_or_ex, ex = nil
+        error [].tap{|e|
+          e << label_or_ex if ex
+          e << "#{"\t" if ex}#{ex ? ex.class : label_or_ex.class}: #{ex ? ex.message : label_or_ex.message}"
+          (ex ? ex : label_or_ex).backtrace.each{|l| e << "\t#{"  " if ex}#{l}" }
+        }.join("\n")
+      end
+
       def sync &block
         @monitor.synchronize(&block)
       end

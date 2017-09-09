@@ -58,11 +58,7 @@ module DbSucker
           update { __send__(:"_view_#{@view}") }
         end
       rescue StandardError => ex
-        Thread.main[:app].sync do
-          error "DbSucker::Window encountered an render error on tick ##{@t}"
-          warn c("\t#{ex.class}: #{ex.message}", :red)
-          ex.backtrace.each{|l| warn c("\t  #{l}", :red) }
-        end
+        Thread.main[:app].notify_exception("DbSucker::Window encountered an render error on tick ##{@t}", ex)
 
         update do
           next_line
