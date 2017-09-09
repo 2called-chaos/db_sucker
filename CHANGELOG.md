@@ -7,8 +7,10 @@
   * DbSucker is now structured to be DBMS agnostic but each DBMS will require it's API implementation.<br>
     Mysql is the only supported adapter for now but feel free to add support for other DBMS.
   * Note that the SequelImporter has been temporarily removed since I need to work on it some more.
-  * Configurations haven't changed except that an "adapter" option is now mandatory on both source and variations.<br>
-    A lot of new options have been added, view example_config.yml to see them all.
+  * Configurations haven't changed *except*
+    * an "adapter" option is now mandatory on both source and variations.
+    * gzip option has been removed, if your "file" option ends with ".gz" we assume gzip
+    * a lot of new options have been added, view example_config.yml to see them all
 
 ### Fixes
 

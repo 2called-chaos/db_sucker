@@ -59,7 +59,7 @@ my_identifier:
 
     # You can also copy the downloaded files to a separate directory (this is not a backup!)
     # - If database is also given perform both operations.
-    # - If gzip is set to true the ".gz" suffix is automatically added.
+    # - If file suffix is ".gz" gzip file will be copied, otherwise we copy raw SQL file
     # - Path will be created in case it doesn't exist (mkdir -p).
     # - Path must be absolute (or start with ~) any may use the following placeholders:
     #    :date       2015-08-26

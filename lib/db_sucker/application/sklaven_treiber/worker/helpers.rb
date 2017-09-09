@@ -10,8 +10,14 @@ module DbSucker
           end
 
           def sftp_download *args, &block
-            SftpDownload.new(*args).tap do |dl|
+            IO::SftpDownload.new(*args).tap do |dl|
               block.try(:call, dl)
+            end
+          end
+
+          def file_copy *args, &block
+            IO::FileCopy.new(*args).tap do |fc|
+              block.try(:call, fc)
             end
           end
 

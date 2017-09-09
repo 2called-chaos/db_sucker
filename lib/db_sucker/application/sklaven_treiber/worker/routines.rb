@@ -55,15 +55,24 @@ module DbSucker
           end
 
           def _copy_file file = nil
-            return
-            if var.data["file"]
-              if !var.data["gzip"] && !@delay_copy_file
+            if var.data["file"].is_a?(String)
+              if !var.data["file"].end_with?(".gz") && !@delay_copy_file
                 @delay_copy_file = true
                 return
               end
-              @status = ["copying file to target path...", :yellow]
-              bfile, channel = var.copy_file(self, file || @lfile)
-              second_progress(channel, "copying file to backup path (:seconds)...").join
+              label = "copying #{@delay_copy_file ? "raw" : "gzipped"} file"
+              @status = ["#{label}...", :yellow]
+
+              @copy_file_source = file || @lfile
+              @copy_file_target = copy_file_destination(@copy_file_source, var.data["file"])
+
+              file_copy(@ctn, @copy_file_source => @copy_file_target) do |fc|
+                fc.label = label
+                fc.status_format = :full
+                @status = [fc, "yellow"]
+                fc.abort_if { @should_cancel }
+                fc.copy!
+              end
             end
           end
 

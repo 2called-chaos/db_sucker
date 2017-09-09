@@ -36,7 +36,7 @@ module DbSucker
           end
 
           def trxid
-            @sklaventreiber.trxid
+            sklaventreiber.trxid
           end
 
           def descriptive
@@ -52,11 +52,23 @@ module DbSucker
           end
 
           def local_tmp_path
-            @sklaventreiber.app.core_tmp_path
+            sklaventreiber.app.core_tmp_path
           end
 
           def local_tmp_file file
             "#{local_tmp_path}/#{file}"
+          end
+
+          def copy_file_destination srcfile, dstfile
+            d, dt = Time.current.strftime("%Y-%m-%d"), Time.current.strftime("%H-%M-%S")
+
+            File.expand_path dstfile.dup
+              .gsub!(":combined", ":datetime_-_:table")
+              .gsub!(":datetime", "#{d}_#{dt}")
+              .gsub!(":date", d)
+              .gsub!(":time", dt)
+              .gsub!(":table", table)
+              .gsub!(":id", sklaventreiber.trxid)
           end
         end
       end

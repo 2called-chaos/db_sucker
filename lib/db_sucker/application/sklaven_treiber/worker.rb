@@ -7,7 +7,7 @@ module DbSucker
         include Helpers
         include Routines
 
-        attr_reader :exception, :ctn, :var, :table, :thread, :monitor, :step, :perform, :should_cancel
+        attr_reader :exception, :ctn, :var, :table, :thread, :monitor, :step, :perform, :should_cancel, :sklaventreiber
         OutputHelper.hook(self)
 
         def initialize sklaventreiber, ctn, var, table

@@ -35,7 +35,7 @@ module DbSucker
         end
 
         begin
-          ctn.ssh_begin
+          ctn.try(:ssh_begin)
           block.call(identifier, ctn, variation, var)
         ensure
           ctn.try(:ssh_end)

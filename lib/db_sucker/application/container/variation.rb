@@ -188,25 +188,6 @@ module DbSucker
           block.call(imp, t)
         end
 
-        def copy_file worker, srcfile
-          d, dt = Time.current.strftime("%Y-%m-%d"), Time.current.strftime("%H-%M-%S")
-          bfile = data["file"]
-          bfile = bfile.gsub(":combined", ":datetime_-_:table")
-          bfile = bfile.gsub(":datetime", "#{d}_#{dt}")
-          bfile = bfile.gsub(":date", d)
-          bfile = bfile.gsub(":time", dt)
-          bfile = bfile.gsub(":table", worker.table)
-          bfile = bfile.gsub(":id", worker.id)
-          bfile = File.expand_path(bfile)
-          bfile = "#{bfile}.gz" if data["gzip"] && !bfile.end_with?(".gz")
-          bfile = bfile[0..-4] if !data["gzip"] && bfile.end_with?(".gz")
-          t = Thread.new{
-            FileUtils.mkdir_p(File.dirname(bfile))
-            FileUtils.copy_file(srcfile, bfile)
-          }
-          [bfile, channelfy_thread(t)]
-        end
-
         def dump_to_local_stream
           raise NotImplemented
         end
