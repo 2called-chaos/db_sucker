@@ -33,16 +33,16 @@ module DbSucker
             end
 
             opt = {}
-            opt[:user] = data["source"]["ssh"]["username"] if data["source"]["ssh"]["username"].present?
-            opt[:password] = data["source"]["ssh"]["password"] if data["source"]["ssh"]["password"].present?
+            opt[:user] = source["ssh"]["username"] if source["ssh"]["username"].present?
+            opt[:password] = source["ssh"]["password"] if source["ssh"]["password"].present?
             opt[:keys] = ssh_key_files if ssh_key_files.any?
-            opt[:port] = data["source"]["ssh"]["port"] if data["source"]["ssh"]["port"].present?
+            opt[:port] = source["ssh"]["port"] if source["ssh"]["port"].present?
             if block
-              Net::SSH.start(data["source"]["ssh"]["hostname"], nil, opt) do |ssh|
+              Net::SSH.start(source["ssh"]["hostname"], nil, opt) do |ssh|
                 block.call(ssh)
               end
             else
-              Net::SSH.start(data["source"]["ssh"]["hostname"], nil, opt)
+              Net::SSH.start(source["ssh"]["hostname"], nil, opt)
             end
           end
         end
@@ -78,16 +78,16 @@ module DbSucker
             end
 
             opt = {}
-            opt[:user] = data["source"]["ssh"]["username"] if data["source"]["ssh"]["username"].present?
-            opt[:password] = data["source"]["ssh"]["password"] if data["source"]["ssh"]["password"].present?
+            opt[:user] = source["ssh"]["username"] if source["ssh"]["username"].present?
+            opt[:password] = source["ssh"]["password"] if source["ssh"]["password"].present?
             opt[:keys] = ssh_key_files if ssh_key_files.any?
-            opt[:port] = data["source"]["ssh"]["port"] if data["source"]["ssh"]["port"].present?
+            opt[:port] = source["ssh"]["port"] if source["ssh"]["port"].present?
             if block
-              Net::SFTP.start(data["source"]["ssh"]["hostname"], nil, opt) do |sftp|
+              Net::SFTP.start(source["ssh"]["hostname"], nil, opt) do |sftp|
                 block.call(sftp)
               end
             else
-              Net::SFTP.start(data["source"]["ssh"]["hostname"], nil, opt)
+              Net::SFTP.start(source["ssh"]["hostname"], nil, opt)
             end
           end
         end
