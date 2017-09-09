@@ -41,9 +41,12 @@ module DbSucker
 
                 @in_file.close
                 @out_file.close
+                FileUtils.mv(@tmploc, @local) if @use_tmp
 
-                if @use_tmp
-                  FileUtils.mv(@tmploc, @local)
+                src_hash = @integrity.call(@remote)
+                dst_hash = @integrity.call(@local)
+                if src_hash != dst_hash
+                  raise "Integrity check failed! [SRC](#{src_hash}) != [DST](#{dst_hash})"
                 end
 
                 @state = :done
