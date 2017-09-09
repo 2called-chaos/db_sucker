@@ -87,6 +87,22 @@ module DbSucker
           end
         end
 
+        def channelfy_thread t
+          def t.active?
+            alive?
+          end
+
+          def t.closed?
+            alive?
+          end
+
+          def t.closing?
+            !alive?
+          end
+
+          t
+        end
+
 
         # ===============
         # = API methods =
@@ -126,22 +142,6 @@ module DbSucker
         def compress_file file, blocking = true
           cmd = %{#{gzip_binary} #{file}}
           ["#{file}.gz", cfg.blocking_channel_result(cmd, channel: true, request_pty: true, blocking: blocking)]
-        end
-
-        def channelfy_thread t
-          def t.active?
-            alive?
-          end
-
-          def t.closed?
-            alive?
-          end
-
-          def t.closing?
-            !alive?
-          end
-
-          t
         end
 
         def decompress_file file

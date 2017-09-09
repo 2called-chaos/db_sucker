@@ -27,11 +27,7 @@ module DbSucker
                   @filesize = sftp.lstat!(@remote).size
                   sftp.download!(@remote, @local, read_size: opts[:read_size]) do |event, downloader, *args|
                     if !@closing && @abort_if.call(self, event, downloader, *args)
-                      # does cancel future operations but will not cancel current download :/
                       downloader.abort!
-                      # so we kill it manually
-                      #
-                      # set closing state
                       @closing = true
                     end
 
