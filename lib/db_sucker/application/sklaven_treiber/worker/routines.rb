@@ -111,6 +111,10 @@ module DbSucker
 
           def _l_verify_raw_hash
             return unless @integrity[:raw]
+            if !File.exist?(@local_file_raw)
+              @status = ["[INTEGRITY] extracted raw file does not exist?! Fatal error!", :red]
+              throw :abort_execution
+            end
             @status = ["verifying data integrity for raw file...", "yellow"]
             cmd, (channel, result) = var.calculate_local_integrity_hash(@local_file_raw, false)
             second_progress(channel, "verifying data integrity for raw file (:seconds)...").join
