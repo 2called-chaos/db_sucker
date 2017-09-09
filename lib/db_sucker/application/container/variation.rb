@@ -47,6 +47,26 @@ module DbSucker
           source["gzip_binary"] || "gzip"
         end
 
+        def integrity
+          (data["integrity"].nil? ? "shasum -ba512" : data["integrity"]).presence
+        end
+
+        def integrity?
+          ctn.integrity? && integrity
+        end
+
+        def copies_file?
+          data["file"]
+        end
+
+        def copies_file_compressed?
+          copies_file? && data["file"].end_with?(".gz")
+        end
+
+        def requires_uncompression?
+          !copies_file_compressed? || data["database"]
+        end
+
         # ===========
         # = RPC API =
         # ===========
@@ -87,20 +107,44 @@ module DbSucker
           end
         end
 
-        def channelfy_thread t
-          def t.active?
+        def channelfy_thread thr
+          def thr.active?
             alive?
           end
 
-          def t.closed?
+          def thr.closed?
             alive?
           end
 
-          def t.closing?
+          def thr.closing?
             !alive?
           end
 
-          t
+          thr
+        end
+
+        def local_execute cmd, opts = {}
+          opts = opts.reverse_merge(blocking: true, thread: false, close_stdin: false, close_stdouterr: false)
+          result = []
+          thr = channelfy_thread Thread.new {
+            Open3.popen2e(cmd, pgroup: true) do |_ipc_stdin, _ipc_stdouterr, _ipc_thread|
+              Thread.current[:ipc_thread] = _ipc_thread
+              Thread.current[:ipc_stdin] = _ipc_stdin
+              Thread.current[:ipc_stdouterr] = _ipc_stdouterr
+              _ipc_stdin.close if opts[:close_stdin]
+              _ipc_stdouterr.close if opts[:close_stdouterr]
+              while l = _ipc_stdouterr.gets
+                result << l.chomp
+              end
+              Thread.current[:exit_code] = _ipc_thread.value
+              if Thread.current[:exit_code] != 0
+                Thread.current[:error_message] = "#{result.last.try(:strip)} (exit #{Thread.current[:exit_code]})".strip
+                sleep 3
+              end
+            end
+          }
+          thr.join if opts[:blocking]
+          opts[:thread] ? [thr, result] : result
         end
 
 
@@ -143,6 +187,22 @@ module DbSucker
           cmd = %{#{gzip_binary} #{file}}
           ["#{file}.gz", cfg.blocking_channel_result(cmd, channel: true, request_pty: true, blocking: blocking)]
         end
+
+        def calculate_local_integrity_hash file, blocking = true
+          return unless integrity?
+          cmd = "#{integrity} #{file}"
+          [cmd, local_execute(cmd, thread: true, blocking: blocking, close_stdin: true)]
+        end
+
+
+
+
+
+
+
+
+
+
 
         def decompress_file file
           cmd = %{gunzip #{file}}

@@ -3,13 +3,12 @@ module DbSucker
     class SklavenTreiber
       class Worker
         module Routines
-          def _dump_file
+          def _r_dump_file
             @status = ["dumping table to remote file...", "yellow"]
 
-            @remote_file_raw_tmp, cr = var.dump_to_remote(self, false)
+            @remote_file_raw_tmp, (channel, result) = var.dump_to_remote(self, false)
             @remote_files_to_remove << @remote_file_raw_tmp
             @remote_file_raw = @remote_file_raw_tmp[0..-5]
-            channel, result = cr
             second_progress(channel, "dumping table to remote file (:seconds)...").join
 
             if result.any?
@@ -19,19 +18,24 @@ module DbSucker
                 throw :abort_execution
               end
             end
-          end
 
-          def _rename_file
-            @status = ["finalizing dump process...", "yellow"]
-
+            # rename tmp file
             ctn.sftp_start do |sftp|
               sftp.rename!(@remote_file_raw_tmp, @remote_file_raw)
             end
+
             @remote_files_to_remove.delete(@remote_file_raw_tmp)
             @remote_files_to_remove << @remote_file_raw
           end
 
-          def _compress_file
+          def _r_calculate_raw_hash
+            @status = ["calculating integrity hash for raw file...", "yellow"]
+            cmd, (channel, result) = ctn.calculate_remote_integrity_hash(@remote_file_raw, false)
+            second_progress(channel, "calculating integrity hash for raw file (:seconds)...").join
+            @integrity = { raw: result.join.split(" ").first.try(:strip).presence }
+          end
+
+          def _r_compress_file
             @status = ["compressing file for transfer...", "yellow"]
 
             @remote_file_compressed, cr = var.compress_file(@remote_file_raw, false)
@@ -41,7 +45,14 @@ module DbSucker
             @remote_files_to_remove.delete(@remote_file_raw) unless @should_cancel
           end
 
-          def _download_file
+          def _r_calculate_compressed_hash
+            @status = ["calculating integrity hash for compressed file...", "yellow"]
+            cmd, (channel, result) = ctn.calculate_remote_integrity_hash(@remote_file_compressed, false)
+            second_progress(channel, "calculating integrity hash for compressed file (:seconds)...").join
+            @integrity[:compressed] = result.join.split(" ").first.try(:strip).presence
+          end
+
+          def _l_download_file
             @status = ["initiating download...", "yellow"]
             @local_file_compressed = local_tmp_file(File.basename(@remote_file_compressed))
             @local_files_to_remove << @local_file_compressed
@@ -54,29 +65,40 @@ module DbSucker
             end
           end
 
-          def _copy_file file = nil
-            if var.data["file"].is_a?(String)
-              if !var.data["file"].end_with?(".gz") && !@delay_copy_file
-                @delay_copy_file = true
-                return
-              end
-              label = "copying #{@delay_copy_file ? "raw" : "gzipped"} file"
-              @status = ["#{label}...", :yellow]
+          def _l_verify_compressed_hash
+            return unless @integrity[:compressed]
+            @status = ["verifying data integrity for compressed file...", "yellow"]
 
-              @copy_file_source = file || @local_file_compressed
-              @copy_file_target = copy_file_destination(@copy_file_source, var.data["file"])
+            cmd, (channel, result) = var.calculate_local_integrity_hash(@local_file_compressed, false)
+            second_progress(channel, "verifying data integrity for compressed file (:seconds)...").join
+            @integrity[:compressed_local] = result.join.split(" ").first.try(:strip).presence
 
-              file_copy(@ctn, @copy_file_source => @copy_file_target) do |fc|
-                fc.label = label
-                fc.status_format = :full
-                @status = [fc, "yellow"]
-                fc.abort_if { @should_cancel }
-                fc.copy!
-              end
+            if !@should_cancel && @integrity[:compressed] != @integrity[:compressed_local]
+              @status = ["[INTEGRITY] downloaded compressed file corrupted! (remote: #{@integrity[:compressed]}, local: #{@integrity[:compressed_local]})", :red]
+              throw :abort_execution
             end
           end
 
-          def _decompress_file
+          def _l_copy_file file = nil
+            return unless var.copies_file?
+            return if !file && !var.copies_file_compressed?
+
+            label = "copying #{@delay_copy_file ? "raw" : "gzipped"} file"
+            @status = ["#{label}...", :yellow]
+
+            @copy_file_source = file || @local_file_compressed
+            @copy_file_target = copy_file_destination(@copy_file_source, var.data["file"])
+
+            file_copy(@ctn, @copy_file_source => @copy_file_target) do |fc|
+              fc.label = label
+              fc.status_format = :full
+              @status = [fc, "yellow"]
+              fc.abort_if { @should_cancel }
+              fc.copy!
+            end
+          end
+
+          def _l_decompress_file
             @status = ["decompressing file...", "yellow"]
             sleep 3
             return
@@ -85,10 +107,23 @@ module DbSucker
             @local_files_to_remove << @local_file_raw
             second_progress(channel, "decompressing file (:seconds)...").join
             @local_files_to_remove.delete(@local_file_compressed)
-            _copy_file(@local_file_raw) if @delay_copy_file
+            _copy_file(@local_file_raw) if !@should_cancel && @delay_copy_file
           end
 
-          def _import_file
+          def _l_verify_raw_hash
+            return unless @integrity[:raw]
+            @status = ["verifying data integrity for raw file...", "yellow"]
+            cmd, (channel, result) = var.calculate_local_integrity_hash(@local_file_raw, false)
+            second_progress(channel, "verifying data integrity for raw file (:seconds)...").join
+            @integrity[:raw_local] = result.join.split(" ").first.try(:strip).presence
+
+            if !@should_cancel && @integrity[:raw] != @integrity[:raw_local]
+              @status = ["[INTEGRITY] extracted raw file corrupted! (remote: #{@integrity[:raw]}, local: #{@integrity[:raw_local]})", :red]
+              throw :abort_execution
+            end
+          end
+
+          def _l_import_file
             if var.data["database"]
               @status = ["loading file into local SQL server...", "yellow"]
               sleep 3

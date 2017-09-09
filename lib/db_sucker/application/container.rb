@@ -34,9 +34,9 @@ module DbSucker
       def __keys_for which
         {
           root: %w[source variations],
-          source: %w[adapter ssh database hostname username password args client_binary dump_binary gzip_binary],
+          source: %w[adapter ssh database hostname username password args client_binary dump_binary gzip_binary integrity],
           source_ssh: %w[hostname username keyfile password port tmp_location],
-          variation: %w[adapter label base database hostname username password args client_binary incremental file only except importer importer_flags ignore_always constraints],
+          variation: %w[adapter label base database hostname username password args client_binary integrity incremental file only except importer importer_flags ignore_always constraints],
         }[which] || []
       end
 
@@ -61,6 +61,20 @@ module DbSucker
             raise ArgumentError, "variation `#{name}' must define an adapter (mysql2, postgres, ...)" if vd["adapter"].blank? && (!base || base["adapter"].blank?)
           end
         end
+      end
+
+      def integrity
+        (source["integrity"].nil? ? "shasum -ba512" : source["integrity"]).presence
+      end
+
+      def integrity?
+        !!integrity
+      end
+
+      def calculate_remote_integrity_hash file, blocking = true
+        return unless integrity?
+        cmd = %{#{integrity} #{file}}
+        [cmd, blocking_channel_result(cmd, channel: true, request_pty: true, blocking: blocking)]
       end
 
       def ssh_key_files

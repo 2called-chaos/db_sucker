@@ -33,6 +33,9 @@ my_identifier:
     client_binary: mysql # used to query remote server
     dump_binary: mysqldump # used to dump on remote server
     gzip_binary: gzip # used to compress file on remote server
+    # binary to generate integrity hashes, can be set to "off" to disable feature,
+    # should obviously be the same (algorithm) as your variation.
+    integrity: shasum -ba512
 
   # define as many variations here as you want.
   variations:
@@ -45,6 +48,10 @@ my_identifier:
       password:
       args:
       client_binary: mysql # used to query/import locally
+
+      # binary to generate integrity hashes, can be set to "off" to disable feature,
+      # should obviously be the same (algorithm) as your source.
+      integrity: shasum -ba512
 
     # you can inherit all settings from another variation with the `base` setting.
     quick:

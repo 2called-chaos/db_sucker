@@ -25,15 +25,16 @@ module DbSucker
             Thread.new do
               Thread.current[:iteration] = initial
               loop do
-                stat = status.gsub(":seconds", human_seconds(Thread.current[:iteration]))
                 if @should_cancel && !Thread.current[:canceled]
                   channel.send_data("\C-c") rescue false if channel.is_a?(Net::SSH::Connection::Channel)
+                  Process.kill(:SIGINT, channel[:ipc_thread].pid) if channel[:ipc_thread]
                   channel.close rescue false
                   Thread.current[:canceled] = true
                 end
+                stat = status.gsub(":seconds", human_seconds(Thread.current[:iteration]))
                 stat = stat.gsub(":workers", channel[:workers].to_s.presence || "?") if is_thread
                 if channel[:error_message]
-                  @status = ["[IMPORT] #{channel[:error_message]}", :red]
+                  @status = ["[ERROR] #{channel[:error_message]}", :red]
                 elsif channel.respond_to?(:active?) && !channel.active?
                   @status = ["[CLOSED] #{stat}", :red]
                 elsif channel.closing?
