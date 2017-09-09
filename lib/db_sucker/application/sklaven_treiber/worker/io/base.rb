@@ -14,7 +14,7 @@ module DbSucker
               @remote = fd.is_a?(Hash) ? fd.keys[0] : fd
               @local = fd.values[0] if fd.is_a?(Hash)
               @status_format = :off
-              @read_size = 5 * 1024 * 1024
+              @read_size = 16384
               @abort_if = Proc.new { false }
               @on_error = Proc.new {}
               @on_complete = Proc.new {}
