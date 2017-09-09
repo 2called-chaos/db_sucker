@@ -15,6 +15,7 @@ module DbSucker
               @local = fd.values[0] if fd.is_a?(Hash)
               @status_format = :off
               @read_size = 16384
+              @integrity = Proc.new {}
               @abort_if = Proc.new { false }
               @on_error = Proc.new {}
               @on_complete = Proc.new {}
@@ -32,6 +33,10 @@ module DbSucker
               @state = :idle
               @offset = 0
               @last_offset = 0
+            end
+
+            def integrity &block
+              @integrity = block
             end
 
             def abort_if &block
