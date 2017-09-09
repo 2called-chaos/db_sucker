@@ -67,8 +67,11 @@ module DbSucker
 
           def _l_verify_compressed_hash
             return unless @integrity[:compressed]
+            if !File.exist?(@local_file_compressed)
+              @status = ["[INTEGRITY] compressed file does not exist?! Fatal error!", :red]
+              throw :abort_execution
+            end
             @status = ["verifying data integrity for compressed file...", "yellow"]
-
             cmd, (channel, result) = var.calculate_local_integrity_hash(@local_file_compressed, false)
             second_progress(channel, "verifying data integrity for compressed file (:seconds)...").join
             @integrity[:compressed_local] = result.join.split(" ").first.try(:strip).presence
