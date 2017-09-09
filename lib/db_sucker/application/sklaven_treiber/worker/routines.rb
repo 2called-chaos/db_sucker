@@ -6,9 +6,9 @@ module DbSucker
           def _dump_file
             @status = ["dumping table to remote file...", "yellow"]
 
-            @rfile, cr = var.dump_to_remote(self, false)
-            @remote_files_to_remove << @rfile
-            @ffile = @rfile[0..-5]
+            @remote_file_raw_tmp, cr = var.dump_to_remote(self, false)
+            @remote_files_to_remove << @remote_file_raw_tmp
+            @remote_file_raw = @remote_file_raw_tmp[0..-5]
             channel, result = cr
             second_progress(channel, "dumping table to remote file (:seconds)...").join
 
@@ -25,28 +25,28 @@ module DbSucker
             @status = ["finalizing dump process...", "yellow"]
 
             ctn.sftp_start do |sftp|
-              sftp.rename!(@rfile, @ffile)
+              sftp.rename!(@remote_file_raw_tmp, @remote_file_raw)
             end
-            @remote_files_to_remove.delete(@rfile)
-            @remote_files_to_remove << @ffile
+            @remote_files_to_remove.delete(@remote_file_raw_tmp)
+            @remote_files_to_remove << @remote_file_raw
           end
 
           def _compress_file
             @status = ["compressing file for transfer...", "yellow"]
 
-            @cfile, cr = var.compress_file(@ffile, false)
-            @remote_files_to_remove << @cfile
+            @remote_file_compressed, cr = var.compress_file(@remote_file_raw, false)
+            @remote_files_to_remove << @remote_file_compressed
             channel, result = cr
             second_progress(channel, "compressing file for transfer (:seconds)...").join
-            @remote_files_to_remove.delete(@ffile) unless @should_cancel
+            @remote_files_to_remove.delete(@remote_file_raw) unless @should_cancel
           end
 
           def _download_file
             @status = ["initiating download...", "yellow"]
-            @lfile = local_tmp_file(File.basename(@cfile))
-            @local_files_to_remove << @lfile
+            @local_file_compressed = local_tmp_file(File.basename(@remote_file_compressed))
+            @local_files_to_remove << @local_file_compressed
 
-            sftp_download(@ctn, @cfile => @lfile) do |dl|
+            sftp_download(@ctn, @remote_file_compressed => @local_file_compressed) do |dl|
               dl.status_format = :full
               @status = [dl, "yellow"]
               dl.abort_if { @should_cancel }
@@ -63,7 +63,7 @@ module DbSucker
               label = "copying #{@delay_copy_file ? "raw" : "gzipped"} file"
               @status = ["#{label}...", :yellow]
 
-              @copy_file_source = file || @lfile
+              @copy_file_source = file || @local_file_compressed
               @copy_file_target = copy_file_destination(@copy_file_source, var.data["file"])
 
               file_copy(@ctn, @copy_file_source => @copy_file_target) do |fc|
@@ -81,11 +81,11 @@ module DbSucker
             sleep 3
             return
 
-            @ldfile, channel = var.decompress_file(@lfile)
-            @local_files_to_remove << @ldfile
+            @local_file_raw, channel = var.decompress_file(@local_file_compressed)
+            @local_files_to_remove << @local_file_raw
             second_progress(channel, "decompressing file (:seconds)...").join
-            @local_files_to_remove.delete(@lfile)
-            _copy_file(@ldfile) if @delay_copy_file
+            @local_files_to_remove.delete(@local_file_compressed)
+            _copy_file(@local_file_raw) if @delay_copy_file
           end
 
           def _import_file
@@ -94,14 +94,14 @@ module DbSucker
               sleep 3
               return
 
-              if File.size(@ldfile) > 50_000_000 && app.opts[:deferred_import]
-                @local_files_to_remove.delete(@ldfile)
-                $deferred_import << [id, ctn, var, table, @ldfile]
-                @status = ["Deferring import of large file (#{human_filesize(File.size(@ldfile))})...", :green]
+              if File.size(@local_file_raw) > 50_000_000 && app.opts[:deferred_import]
+                @local_files_to_remove.delete(@local_file_raw)
+                $deferred_import << [id, ctn, var, table, @local_file_raw]
+                @status = ["Deferring import of large file (#{human_filesize(File.size(@local_file_raw))})...", :green]
                 @got_deferred = true
                 sleep 3
               else
-                _do_import_file(@ldfile)
+                _do_import_file(@local_file_raw)
               end
             end
           end
