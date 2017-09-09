@@ -116,10 +116,10 @@ module DbSucker
 
                 case _this.state
                 when :idle, :init
-                  attron(color_pair(Window::COLOR_BLUE)|Window::A_BOLD) { addstr("#{_this.label}: ") }
+                  attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr("#{_this.label}: ") }
                   attron(color_pair(Window::COLOR_GRAY)|Window::A_BOLD) { addstr(" initiating...") }
                 when :finishing
-                  attron(color_pair(Window::COLOR_BLUE)|Window::A_BOLD) { addstr("#{_this.label}: ") }
+                  attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr("#{_this.label}: ") }
                   attron(color_pair(Window::COLOR_GRAY)|Window::A_BOLD) { addstr(" finishing...") }
                 when :done
                   fperc = f_percentage(_this.offset, _this.filesize)
@@ -144,7 +144,7 @@ module DbSucker
                   end
                   eta = bps.zero? ? "?:¿?:¿?" : human_seconds2(bytes_remain / bps)
 
-                  attron(color_pair(Window::COLOR_BLUE)|Window::A_BOLD) { addstr("#{_this.label}: ") }
+                  attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr("#{_this.label}: ") }
                   diffp = _this.offset == 0 ? 0 : _this.offset.to_d / _this.filesize.to_d * 100.to_d
                   color = diffp > 90 ? Window::COLOR_GREEN : diffp > 75 ? Window::COLOR_BLUE : diffp > 50 ? Window::COLOR_CYAN : diffp > 25 ? Window::COLOR_YELLOW : Window::COLOR_RED
                   attron(color_pair(color)|Window::A_NORMAL) { addstr(f_percentage(_this.offset, _this.filesize).rjust(7, " ") << " ") }
