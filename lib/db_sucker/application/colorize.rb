@@ -1,6 +1,7 @@
 module DbSucker
   class Application
     module Colorize
+      UnknownColorError = Class.new(::ArgumentError)
       COLORMAP = {
         black: 30,
         gray: 30,
@@ -14,7 +15,7 @@ module DbSucker
       }
 
       def colorize str, color = :yellow
-        ccode = COLORMAP[color.to_sym] || raise(ArgumentError, "Unknown color #{color}!")
+        ccode = COLORMAP[color.to_sym] || raise(UnknownColorError, "unknown color `#{color}'")
         @opts[:colorize] ? "\e[#{ccode}m#{str}\e[0m" : "#{str}"
       end
       alias_method :c, :colorize

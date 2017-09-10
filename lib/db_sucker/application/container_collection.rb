@@ -2,6 +2,7 @@ module DbSucker
   class Application
     class ContainerCollection
       attr_reader :app, :data
+      DuplicateIdentifierError = Class.new(::ArgumentError)
 
       def initialize app
         @app = app
@@ -23,7 +24,7 @@ module DbSucker
       def load_yml_config file
         YAML.load_file(file).each do |id, cfg|
           if @data.key?(id)
-            raise "double use of identifier `#{id}' in `#{file}'"
+            raise DuplicateIdentifierError, "double use of identifier `#{id}' in `#{file}'"
           else
             @data[id] = Container.new(id, file, cfg)
           end

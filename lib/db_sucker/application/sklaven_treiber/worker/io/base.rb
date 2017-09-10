@@ -4,6 +4,8 @@ module DbSucker
       class Worker
         module IO
           class Base
+            UnknownFormatterError = Class.new(::ArgumentError)
+            DataIntegrityError = Class.new(::RuntimeError)
             STATUS_FORMATTERS = [:none, :minimal, :full]
             attr_reader :status_format, :state, :operror, :filesize, :offset, :closing, :local, :remote, :ctn
             attr_accessor :read_size, :last_offset, :last_time, :label, :entity
@@ -57,7 +59,7 @@ module DbSucker
 
             def status_format= which
               which = which.to_sym
-              raise "unknown status format `#{which}', available options: #{STATUS_FORMATTERS * ", "}" unless STATUS_FORMATTERS.include?(which)
+              raise UnknownFormatterError, "unknown status format `#{which}', available options: #{STATUS_FORMATTERS * ", "}" unless STATUS_FORMATTERS.include?(which)
               @status_format = which
             end
 

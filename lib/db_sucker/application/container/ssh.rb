@@ -2,6 +2,7 @@ module DbSucker
   class Application
     class Container
       module SSH
+        CommandExecutionError = Class.new(::RuntimeError)
         begin # SSH
           def ssh_begin
             debug "Opening SSH connection for identifier `#{name}'"
@@ -99,7 +100,7 @@ module DbSucker
           end
 
           def blocking_channel ssh = nil, &block
-            channel = (ssh || ssh_start).open_channel do |ch|
+            (ssh || ssh_start).open_channel do |ch|
               block.call(ch)
             end.tap(&:wait)
           end
@@ -116,7 +117,7 @@ module DbSucker
             chan = send(opts[:blocking] ? :blocking_channel : :nonblocking_channel, opts[:ssh]) do |ch|
               chproc = ->(ch, cmd, result) {
                 ch.exec(cmd) do |ch, success|
-                  raise "could not execute command" unless success
+                  raise CommandExecutionError, "could not execute command" unless success
 
                   # "on_data" is called when the process writes something to stdout
                   ch.on_data do |c, data|
@@ -133,7 +134,7 @@ module DbSucker
               }
               if opts[:request_pty]
                 ch.request_pty do |ch, success|
-                  raise "could not obtain pty" unless success
+                  raise CommandExecutionError, "could not obtain pty" unless success
                   chproc.call(ch, cmd, result)
                 end
               else

@@ -39,7 +39,7 @@ module DbSucker
 
       def abort msg, exit_code = 1
         warn c("[ABORT] #{msg}", :red)
-        exit(exit_code)
+        exit(exit_code) if exit_code
       end
 
       def uncolorize str

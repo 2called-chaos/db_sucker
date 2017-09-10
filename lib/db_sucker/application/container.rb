@@ -4,6 +4,9 @@ module DbSucker
       include SSH
       attr_reader :name, :src, :data
       OutputHelper.hook(self)
+      AdapterNotFoundError = Class.new(::ArgumentError)
+      TableNotFoundError = Class.new(::RuntimeError)
+      ConfigurationError = Class.new(::ArgumentError)
 
       def initialize name, src, data
         @name = name
@@ -17,16 +20,16 @@ module DbSucker
         begin
           extend "DbSucker::Adapters::#{@data["source"]["adapter"].camelize}::RPC".constantize
         rescue NameError => ex
-          raise(ex, "identifier `#{name}' defines invalid source adapter `#{@data["source"]["adapter"]}' (in `#{@src}'): #{ex.message}", ex.backtrace)
+          raise(AdapterNotFoundError, "identifier `#{name}' defines invalid source adapter `#{@data["source"]["adapter"]}' (in `#{@src}'): #{ex.message}", ex.backtrace)
         end
       end
 
       def _verify token, hash, keys
         begin
           hash.assert_valid_keys(keys)
-          raise ArgumentError, "A source must define an adapter (mysql2, postgres, ...)" if token == "/source" && hash["adapter"].blank?
-          raise ArgumentError, "A variation `#{name}' can only define either a `only' or `except' option" if hash["only"] && hash["except"]
-        rescue ArgumentError => ex
+          raise ConfigurationError, "A source must define an adapter (mysql2, postgres, ...)" if token == "/source" && hash["adapter"].blank?
+          raise ConfigurationError, "A variation `#{name}' can only define either a `only' or `except' option" if hash["only"] && hash["except"]
+        rescue ConfigurationError => ex
           abort "#{ex.message} (in `#{src}' [#{token}])"
         end
       end
@@ -57,8 +60,8 @@ module DbSucker
           sd.each do |name, vd|
             _verify("/variations/#{name}", vd, __keys_for(:variation))
             base = sd[vd["base"]] if vd["base"]
-            raise(ArgumentError, "variation `#{name}' cannot base from `#{vd["base"]}' since it doesn't exist (in `#{src}')") if vd["base"] && !base
-            raise ArgumentError, "variation `#{name}' must define an adapter (mysql2, postgres, ...)" if vd["adapter"].blank? && (!base || base["adapter"].blank?)
+            raise(ConfigurationError, "variation `#{name}' cannot base from `#{vd["base"]}' since it doesn't exist (in `#{src}')") if vd["base"] && !base
+            raise ConfigurationError, "variation `#{name}' must define an adapter (mysql2, postgres, ...)" if vd["adapter"].blank? && (!base || base["adapter"].blank?)
           end
         end
       end

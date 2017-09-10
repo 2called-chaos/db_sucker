@@ -2,13 +2,15 @@ module DbSucker
   class Application
     class Container
       class Variation
+        ImporterNotFoundError = Class.new(::RuntimeError)
+        InvalidImporterFlagError = Class.new(::RuntimeError)
         attr_reader :cfg, :name, :data
 
         def initialize cfg, name, data
           @cfg, @name, @data = cfg, name, data
 
           if data["base"]
-            bdata = cfg.variation(data["base"]) || raise("variation `#{name}' cannot base from `#{data["base"]}' since it doesn't exist (in `#{cfg.src}')")
+            bdata = cfg.variation(data["base"]) || raise(ConfigurationError, "variation `#{cfg.name}/#{name}' cannot base from `#{data["base"]}' since it doesn't exist (in `#{cfg.src}')")
             @data = data.reverse_merge(bdata.data)
           end
 
@@ -16,10 +18,10 @@ module DbSucker
             begin
               extend "DbSucker::Adapters::#{@data["adapter"].camelize}::RPC".constantize
             rescue NameError => ex
-              raise(ex, "variation `#{name}' defines invalid adapter `#{@data["adapter"]}' (in `#{cfg.src}'): #{ex.message}", ex.backtrace)
+              raise(AdapterNotFoundError, "variation `#{cfg.name}/#{name}' defines invalid adapter `#{@data["adapter"]}' (in `#{cfg.src}'): #{ex.message}", ex.backtrace)
             end
-          else
-            raise("variation `#{name}' must define an adapter to use (in `#{cfg.src}')")
+          elsif @data["database"]
+            raise(ConfigurationError, "variation `#{cfg.name}/#{name}' must define an adapter (mysql2, postgres, ...) if database is provided (in `#{cfg.src}')")
           end
         end
 
@@ -83,12 +85,12 @@ module DbSucker
           :hostname,
         ].each do |meth|
           define_method meth do
-            raise NotImplementedError, "Your adapter `#{@data["adapter"]}' (used in `#{cfg.src}') must implement `##{meth}'"
+            raise NotImplementedError, "your selected adapter `#{@data["adapter"]}' must implement `##{meth}' for variation `#{cfg.name}/#{name}' (in `#{cfg.src}')"
           end
         end
 
         def dump_command_for table
-          raise NotImplementedError, "Your adapter `#{@data["adapter"]}' (used in `#{cfg.src}') must implement `#dump_command_for(table)'"
+          raise NotImplementedError, "your selected adapter `#{@data["adapter"]}' must implement `#dump_command_for(table)' for variation `#{cfg.name}/#{name}' (in `#{cfg.src}')"
         end
 
 
@@ -102,7 +104,7 @@ module DbSucker
             elsif m = fstr.match(/\-(?<key>[^=]+)/)
               res[m[:key]] = false
             else
-              raise "invalid importer_flag `#{fstr}' for variation `#{cfg.name}/#{name}' in #{cfg.src}"
+              raise InvalidImporterFlagError, "invalid flag `#{fstr}' for variation `#{cfg.name}/#{name}' (in `#{cfg.src}')"
             end
           end
         end
@@ -156,13 +158,17 @@ module DbSucker
           keep = []
           if data["only"]
             [*data["only"]].each do |t|
-              raise "unknown table `#{t}' for variation `#{cfg.name}/#{name}' in #{cfg.src}" unless all.include?(t)
+              unless all.include?(t)
+                raise TableNotFoundError, "table `#{t}' for the database `#{cfg.source["database"]}' could not be found (provided by variation `#{cfg.name}/#{name}' in `#{cfg.src}')"
+              end
               keep << t
             end
           elsif data["except"]
             keep = all.dup
             [*data["except"]].each do |t|
-              raise "unknown table `#{t}' for variation `#{cfg.name}/#{name}' in #{cfg.src}" unless all.include?(t)
+              unless all.include?(t)
+                raise TableNotFoundError, "table `#{t}' for the database `#{cfg.source["database"]}' could not be found (provided by variation `#{cfg.name}/#{name}' in `#{cfg.src}')"
+              end
               keep.delete(t)
             end
           else
@@ -240,7 +246,7 @@ module DbSucker
               end
             }
           else
-            raise "unknown importer `#{imp}' for variation `#{cfg.name}/#{name}' in #{cfg.src}"
+            raise ImporterNotFoundError, "variation `#{cfg.name}/#{name}' defines unknown importer `#{imp}' (in `#{cfg.src}')"
           end
 
           block.call(imp, t)

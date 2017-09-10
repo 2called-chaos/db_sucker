@@ -19,19 +19,26 @@ module DbSucker
       new(*a) do |app|
         Thread.main[:app] = app
         app.load_appconfig
-        app.parse_params
         begin
+          app.parse_params
           app.dispatch
           app.haltpoint
         rescue Interrupt
           app.abort("Interrupted", 1)
+        rescue OptionParser::ParseError => ex
+          app.fire(:core_exception, ex)
+          app.abort("#{ex.message}", false)
+          app.log app.c("Run `#{$0} --help' for more info", :blue)
         rescue StandardError => ex
+          app.fire(:core_exception, ex)
           app.warn app.c("[FATAL] #{ex.class}: #{ex.message}", :red)
           ex.backtrace.each do |l|
             app.warn app.c("\t#{l}", :red)
           end
-          app.fire(:core_exception, ex)
-          app.abort "Unhandled exception terminated application!"
+          app.abort case ex
+            when Container::TableNotFoundError then ex.message
+            else "Unhandled exception terminated application!"
+          end
         ensure
           app.fire(:core_shutdown)
           app.debug "#{Thread.list.length} threads remain..."
@@ -107,10 +114,6 @@ module DbSucker
 
     def parse_params
       @optparse.parse!(@argv)
-    rescue OptionParser::ParseError => e
-      abort(e.message)
-      dispatch(:help)
-      exit 1
     end
 
 

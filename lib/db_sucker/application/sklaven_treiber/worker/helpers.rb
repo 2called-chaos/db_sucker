@@ -10,20 +10,22 @@ module DbSucker
           end
 
           def sftp_download *args, &block
-            IO::SftpDownload.new(*args).tap do |dl|
-              block.try(:call, dl)
+            IO::SftpDownload.new(*args).tap do |op|
+              block.try(:call, op)
             end
           end
 
           def file_copy *args, &block
-            IO::FileCopy.new(*args).tap do |fc|
-              block.try(:call, fc)
+            IO::FileCopy.new(*args).tap do |op|
+              block.try(:call, op)
             end
           end
 
           def file_gunzip *args, &block
-            IO::FileGunzip.new(*args).tap do |fc|
-              block.try(:call, fc)
+            IO::FileGunzip.new(*args).tap do |op|
+              block.try(:call, op)
+            end
+          end
             end
           end
 

@@ -36,13 +36,16 @@ module DbSucker
 
         # apply only/except filters provided via command line
         if @app.opts[:suck_only].any? && @app.opts[:suck_except].any?
-          raise ArgumentError, "Only one of `--only' or `--except' option can be provided at the same time"
+          raise OptionParser::InvalidArgument, "only one of `--only' or `--except' option can be provided at the same time"
         elsif @app.opts[:suck_only].any?
           unless (r = @app.opts[:suck_only] - at).empty?
-            raise ArgumentError, "The table(s) `#{r * ", "}' for the database `#{ctn.source["database"]}' could not be found, #{at}"
+            raise Container::TableNotFoundError, "table(s) `#{r * ", "}' for the database `#{ctn.source["database"]}' could not be found (provided via --only, variation `#{ctn.name}/#{var.name}' in `#{ctn.src}')"
           end
           ttt = @app.opts[:suck_only]
         elsif @app.opts[:suck_except].any?
+          unless (r = @app.opts[:suck_except] - at).empty?
+            raise Container::TableNotFoundError, "table(s) `#{r * ", "}' for the database `#{ctn.source["database"]}' could not be found (provided via --except, variation `#{ctn.name}/#{var.name}' in `#{ctn.src}')"
+          end
           ttt = ttt - @app.opts[:suck_except]
         end
 

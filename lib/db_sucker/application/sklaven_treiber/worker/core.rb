@@ -65,7 +65,7 @@ module DbSucker
             end
           rescue StandardError => ex
             @exception = ex
-            @status = ["FAILED (#{ex.message})", "red"]
+            @status = ["FAILED(#{current_perform}) #{ex.class}: #{ex.message}", "red"]
             @state = :failed
             Thread.main[:app].notify_exception("SklavenTreiber::Worker encountered an error in `#{current_perform}' (ctn: #{ctn.name}, var: #{var.name}, db: #{ctn.source["database"]}, table: #{table})", ex)
           ensure

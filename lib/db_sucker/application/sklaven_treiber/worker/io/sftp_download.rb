@@ -4,6 +4,7 @@ module DbSucker
       class Worker
         module IO
           class SftpDownload < Base
+            UnknownEventError = Class.new(::RuntimeError)
             attr_reader :downloader
 
             def init
@@ -43,7 +44,7 @@ module DbSucker
                     when :finish
                       @state = :done
                     else
-                      raise("unknown event #{event}")
+                      raise UnknownEventError, "unknown event `#{event}'"
                     end
                   end
                 end
