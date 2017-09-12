@@ -47,7 +47,7 @@ module DbSucker
                 pv.filesize = @remote_file_raw_filesize
                 pv.label = "compressing"
                 pv.entity = "compress"
-                pv.status_format = :full
+                pv.status_format = app.opts[:status_format]
                 @status = [pv, "yellow"]
                 pv.abort_if { @should_cancel }
                 @remote_file_compressed, pv.cmd = var.compress_file_command(@remote_file_raw, pvbinary)
@@ -81,7 +81,7 @@ module DbSucker
             @local_files_to_remove << @local_file_compressed
 
             sftp_download(@ctn, @remote_file_compressed => @local_file_compressed) do |dl|
-              dl.status_format = :full
+              dl.status_format = app.opts[:status_format]
               @status = [dl, "yellow"]
               dl.abort_if { @should_cancel }
               dl.download!
@@ -114,7 +114,7 @@ module DbSucker
 
             file_copy(@ctn, @copy_file_source => @copy_file_target) do |fc|
               fc.label = label
-              fc.status_format = :full
+              fc.status_format = app.opts[:status_format]
               fc.integrity do |f|
                 var.calculate_local_integrity_hash(f)[1].join.split(" ").first.try(:strip).presence
               end if var.integrity?
@@ -130,7 +130,7 @@ module DbSucker
 
             file_gunzip(@ctn, @local_file_compressed) do |fc|
               fc.label = label
-              fc.status_format = :full
+              fc.status_format = app.opts[:status_format]
               @status = [fc, "yellow"]
 
               fc.abort_if { @should_cancel }

@@ -26,7 +26,7 @@ module DbSucker
           if @data.key?(id)
             raise DuplicateIdentifierError, "double use of identifier `#{id}' in `#{file}'"
           else
-            @data[id] = Container.new(id, file, cfg)
+            @data[id] = Container.new(app, id, file, cfg)
           end
         end
       end

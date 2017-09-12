@@ -39,6 +39,10 @@ module DbSucker
             sklaventreiber.trxid
           end
 
+          def app
+            sklaventreiber.app
+          end
+
           def descriptive
             "#{ctn.source["database"]}-#{table}"
           end

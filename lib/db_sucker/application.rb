@@ -59,7 +59,6 @@ module DbSucker
         check_for_updates: true, # -z flag
         colorize: true,          # --monochrome flag
         debug: false,            # -d flag
-        quiet: false,            # -q flag
         stdout: STDOUT,          # (internal) STDOUT redirect
         pipein: ARGF,            # (internal) INPUT redirect
 
@@ -70,9 +69,10 @@ module DbSucker
         simulate: false,         # --simulate flag
         deferred_import: true,   # -n flag
 
-        # log files
-        log_keep: 10,                   # Amount of logfiles to keep
-        log_size: 10240000,             # Max size of each logfile (in bytes)
+        # features
+        status_format: :full,    # used for IO operations, can be one of: none, minimal, full
+        pv_enabled: true,        # disable pv utility autodiscovery (force non-usage)
+
 
         # sklaven treiber
         window_draw: true, # wether to refresh screen or not
@@ -80,7 +80,7 @@ module DbSucker
         consumers: 10, # amount of workers to run at the same time
 
         # amount of workers that can use a slot, false to disable
-        slot_deferred: 1,
+        #slot_deferred: 1,
         # slot_sftp: false,
       }
       init_params

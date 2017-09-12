@@ -2,13 +2,14 @@ module DbSucker
   class Application
     class Container
       include SSH
-      attr_reader :name, :src, :data
+      attr_reader :app, :name, :src, :data
       OutputHelper.hook(self)
       AdapterNotFoundError = Class.new(::ArgumentError)
       TableNotFoundError = Class.new(::RuntimeError)
       ConfigurationError = Class.new(::ArgumentError)
 
-      def initialize name, src, data
+      def initialize app, name, src, data
+        @app = app
         @name = name
         @src = src
         @data = data
@@ -83,8 +84,8 @@ module DbSucker
                 @_pv_utility = res[0].strip.presence
               end
             end
-            @_pv_utility = false unless @_pv_utility
-          end
+          end if app.opts[:pv_enabled]
+          @_pv_utility = false unless @_pv_utility
         end
         @_pv_utility
       end
