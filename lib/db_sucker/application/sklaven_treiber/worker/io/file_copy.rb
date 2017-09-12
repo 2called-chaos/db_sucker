@@ -37,12 +37,15 @@ module DbSucker
                     @out_file.syswrite(buf)
                   end
                 rescue EOFError
+                ensure
+                  @state = :finishing
+                  @in_file.close
+                  @out_file.close
                 end
 
-                @in_file.close
-                @out_file.close
                 FileUtils.mv(@tmploc, @local) if @use_tmp
 
+                @state = :verifying
                 src_hash = @integrity.call(@remote)
                 dst_hash = @integrity.call(@local)
                 if src_hash != dst_hash

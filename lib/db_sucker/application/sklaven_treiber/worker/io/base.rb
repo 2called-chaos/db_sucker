@@ -23,6 +23,7 @@ module DbSucker
               @on_error = Proc.new {}
               @on_complete = Proc.new {}
               @on_success = Proc.new {}
+              @filesize = 0
               init
               reset_state
             end
@@ -71,7 +72,7 @@ module DbSucker
             def to_s
               return @operror if @operror
 
-              _str = [].tap do |r|
+              [].tap do |r|
                 r << "[CLOSING]" if @closing
                 if @status_format == :none
                   r << "#{@label}"
@@ -84,9 +85,12 @@ module DbSucker
                 when :finishing
                   r << "#{@label}:"
                   r << " finishing..."
+                when :verifying
+                  r << "#{@label}:"
+                  r << " verifying..."
                 when :done
                   r << "#{@entity || @label} #{@offset == @filesize ? "complete" : "INCOMPLETE"}: #{f_percentage(@offset, @filesize)} – #{human_bytes @offset}/#{human_bytes @filesize}"
-                when :downloading
+                when :downloading, :copying, :decompressing, :working
                   bytes_remain = @filesize - @offset
                   if @last_time
                     offset_diff = @offset - @last_offset
@@ -117,7 +121,6 @@ module DbSucker
                   @last_time = Time.now
                 end
               end * " "
-              c(_str, @closing ? :red : :yellow)
             end
 
             def to_curses target
@@ -144,6 +147,9 @@ module DbSucker
                 when :finishing
                   attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr("#{_this.label}: ") }
                   attron(color_pair(Window::COLOR_GRAY)|Window::A_BOLD) { addstr(" finishing...") }
+                when :verifying
+                  attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr("#{_this.label}: ") }
+                  attron(color_pair(Window::COLOR_GRAY)|Window::A_BOLD) { addstr(" verifying...") }
                 when :done
                   fperc = f_percentage(_this.offset, _this.filesize)
                   if _this.offset == _this.filesize
@@ -155,7 +161,7 @@ module DbSucker
                     attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr(" – ") }
                     attron(color_pair(Window::COLOR_CYAN)|Window::A_BOLD) { addstr("#{human_bytes _this.offset}/#{human_bytes _this.filesize}") }
                   end
-                when :downloading, :copying, :decompressing
+                when :downloading, :copying, :decompressing, :working
                   bytes_remain = _this.filesize - _this.offset
                   if _this.last_time
                     offset_diff = _this.offset - _this.last_offset

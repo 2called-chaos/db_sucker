@@ -35,11 +35,12 @@ module DbSucker
                     @out_file.syswrite(buf)
                   end
                 ensure
+                  @state = :finishing
                   gz.close
+                  @in_file.close
+                  @out_file.close
                 end
 
-                @in_file.close
-                @out_file.close
                 FileUtils.mv(@tmploc, @local) if @use_tmp
                 File.unlink(@remote) unless @preserve_original
 
