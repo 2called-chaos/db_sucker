@@ -75,6 +75,7 @@ module DbSucker
 
 
         # sklaven treiber
+        window_enabled: true, # if disabled effectively disables any status progress or window drawing
         window_draw: true, # wether to refresh screen or not
         window_refresh_delay: 0.25, # refresh screen every so many seconds
         consumers: 10, # amount of workers to run at the same time
@@ -105,7 +106,8 @@ module DbSucker
 
         opts.separator("\n" << "# General options")
         opts.on("-d", "--debug [lvl=1]", Integer, "Enable debug output") {|l| @opts[:debug] = l || 1 }
-        opts.on("--monochrome", "Don't colorize output") { @opts[:colorize] = false }
+        opts.on("--monochrome", "Don't colorize output (does not apply to curses)") { @opts[:colorize] = false }
+        opts.on("--no-window", "Disables curses window alltogether (no progress)") { @opts[:window_enabled] = false }
         opts.on("-h", "--help", "Shows this help") { @opts[:dispatch] = :help }
         opts.on("-v", "--version", "Shows version and other info") { @opts[:dispatch] = :info }
         opts.on("-z", "Do not check for updates on GitHub (with -v/--version)") { @opts[:check_for_updates] = false }
