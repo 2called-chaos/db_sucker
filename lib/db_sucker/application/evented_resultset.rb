@@ -73,6 +73,11 @@ module DbSucker
         each.join(*a)
       end
 
+      def [] which
+        wait
+        @store[which].try(:last)
+      end
+
       def eachx &block
         wait
         @store.each(&block)
@@ -126,8 +131,6 @@ module DbSucker
           Thread.current[self.object_id.to_s] += 1
           @store[Thread.current[self.object_id.to_s]]
         end
-      rescue Interrupt
-        `say defuq`
       end
     end
   end

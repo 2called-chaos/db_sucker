@@ -12,18 +12,27 @@ module DbSucker
             OutputHelper.hook(self)
 
             def initialize worker, ctn, fd
+              # references
               @worker = worker
               @ctn = ctn
+
+              # remote & local
               @remote = fd.is_a?(Hash) ? fd.keys[0] : fd
               @local = fd.values[0] if fd.is_a?(Hash)
+
+              # defaults
+              @label ||= "working"
+              @entity ||= "task"
               @status_format = :off
               @read_size = 128 * 1024 # 128kb
+              @filesize = 0
+
+              # callbacks
               @integrity = Proc.new {}
               @abort_if = Proc.new { false }
               @on_error = Proc.new {}
               @on_complete = Proc.new {}
               @on_success = Proc.new {}
-              @filesize = 0
               init
               reset_state
             end

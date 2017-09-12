@@ -19,10 +19,14 @@ module DbSucker
               end
             end
 
-            # rename tmp file
             ctn.sftp_start do |sftp|
+              # rename tmp file
               sftp.rename!(@remote_file_raw_tmp, @remote_file_raw)
+
+              # save size for gzip progress
+              @remote_file_raw_filesize = sftp.lstat!(@remote_file_raw).size
             end
+
 
             @remote_files_to_remove.delete(@remote_file_raw_tmp)
             @remote_files_to_remove << @remote_file_raw
@@ -38,11 +42,30 @@ module DbSucker
           def _r_compress_file
             @status = ["compressing file for transfer...", "yellow"]
 
-            @remote_file_compressed, cr = var.compress_file(@remote_file_raw, false)
-            @remote_files_to_remove << @remote_file_compressed
-            channel, result = cr
-            second_progress(channel, "compressing file for transfer (:seconds)...").join
-            @remote_files_to_remove.delete(@remote_file_raw) unless @should_cancel
+            pv_wrap(@ctn, nil) do |pv|
+              pv.enabled do |pvbinary|
+                pv.filesize = @remote_file_raw_filesize
+                pv.label = "compressing"
+                pv.entity = "compress"
+                pv.status_format = :full
+                @status = [pv, "yellow"]
+                pv.abort_if { @should_cancel }
+                @remote_file_compressed, pv.cmd = var.compress_file_command(@remote_file_raw, pvbinary)
+                @remote_files_to_remove << @remote_file_compressed
+              end
+
+              pv.fallback do
+                @remote_file_compressed, (channel, result) = var.compress_file(@remote_file_raw, false)
+                @remote_files_to_remove << @remote_file_compressed
+                second_progress(channel, "compressing file for transfer (:seconds)...").join
+              end
+
+              pv.on_success do
+                @remote_files_to_remove.delete(@remote_file_raw) unless @should_cancel
+              end
+
+              pv.perform!
+            end
           end
 
           def _r_calculate_compressed_hash

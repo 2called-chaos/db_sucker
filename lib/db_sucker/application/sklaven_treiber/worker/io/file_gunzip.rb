@@ -8,8 +8,8 @@ module DbSucker
             attr_accessor :preserve_original
 
             def init
-              @label ||= "decompressing"
-              @entity ||= "decompress"
+              @label = "decompressing"
+              @entity = "decompress"
               @use_tmp = true
               @preserve_original = false
               @local ||= "#{File.dirname(@remote)}/#{File.basename(@remote, ".gz")}"

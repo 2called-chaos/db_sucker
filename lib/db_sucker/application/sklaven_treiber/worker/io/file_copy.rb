@@ -7,8 +7,8 @@ module DbSucker
             attr_accessor :use_tmp
 
             def init
-              @label ||= "copying"
-              @entity ||= "copy"
+              @label = "copying"
+              @entity = "copy"
               @use_tmp = true
             end
 

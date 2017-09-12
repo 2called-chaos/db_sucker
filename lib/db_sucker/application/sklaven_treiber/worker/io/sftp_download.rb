@@ -8,8 +8,8 @@ module DbSucker
             attr_reader :downloader
 
             def init
-              @label ||= "downloading"
-              @entity ||= "download"
+              @label = "downloading"
+              @entity = "download"
             end
 
             def reset_state

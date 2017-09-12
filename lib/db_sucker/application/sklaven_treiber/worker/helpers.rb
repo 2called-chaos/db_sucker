@@ -26,6 +26,10 @@ module DbSucker
               block.try(:call, op)
             end
           end
+
+          def pv_wrap *args, &block
+            IO::PvWrapper.new(self, *args).tap do |op|
+              block.try(:call, op)
             end
           end
 

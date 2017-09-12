@@ -74,6 +74,21 @@ module DbSucker
         !!integrity
       end
 
+      def pv_utility
+        if @_pv_utility.nil?
+          ssh_start(true) do |ssh|
+            res = blocking_channel_result("which pv && pv --version", ssh: ssh)
+            if m = res[1].to_s.match(/pv\s([0-9\.]+)\s/i)
+              if Gem::Version.new(m[1]) >= Gem::Version.new("1.3.8")
+                @_pv_utility = res[0].strip.presence
+              end
+            end
+            @_pv_utility = false unless @_pv_utility
+          end
+        end
+        @_pv_utility
+      end
+
       def calculate_remote_integrity_hash file, blocking = true
         return unless integrity?
         cmd = %{#{integrity} #{file}}

@@ -189,9 +189,18 @@ module DbSucker
           [worker.tmp_filename(true), cfg.blocking_channel_result(cmd, channel: true, request_pty: true, blocking: blocking)]
         end
 
+        def compress_file_command file, pv_binary = false
+          if pv_binary.presence
+            cmd = %{#{pv_binary} -n -b #{file} | #{gzip_binary} > #{file}.gz && rm #{file} }
+          else
+            cmd = %{#{gzip_binary} #{file}}
+          end
+          ["#{file}.gz", cmd]
+        end
+
         def compress_file file, blocking = true
-          cmd = %{#{gzip_binary} #{file}}
-          ["#{file}.gz", cfg.blocking_channel_result(cmd, channel: true, request_pty: true, blocking: blocking)]
+          nfile, cmd = compress_file_command(file)
+          [nfile, cfg.blocking_channel_result(cmd, channel: true, request_pty: true, blocking: blocking)]
         end
 
         def calculate_local_integrity_hash file, blocking = true
