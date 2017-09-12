@@ -60,6 +60,7 @@ module DbSucker
                 _cancelpoint @status[0], true
                 @step = i + 1
                 @timings[m] = Benchmark.realtime { send(:"_#{m}") }
+                _cancelpoint @status[0], true
               end
               @status = ["DONE (#{runtime})", "green"]
             end
