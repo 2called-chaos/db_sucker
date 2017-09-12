@@ -11,7 +11,8 @@ module DbSucker
             attr_accessor :read_size, :last_offset, :last_time, :label, :entity
             OutputHelper.hook(self)
 
-            def initialize ctn, fd
+            def initialize worker, ctn, fd
+              @worker = worker
               @ctn = ctn
               @remote = fd.is_a?(Hash) ? fd.keys[0] : fd
               @local = fd.values[0] if fd.is_a?(Hash)
