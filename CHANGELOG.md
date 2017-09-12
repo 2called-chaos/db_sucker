@@ -8,6 +8,7 @@
     Mysql is the only supported adapter for now but feel free to add support for other DBMS.
   * Note that the SequelImporter has been temporarily removed since I need to work on it some more.
   * Added integrity checking (checksum checking of transmitted files)
+  * Added a lot of status displays
   * Configurations haven't changed *except*
     * an "adapter" option is now mandatory on both source and variations.
     * gzip option has been removed, if your "file" option ends with ".gz" we assume gzip

@@ -4,6 +4,11 @@ module DbSucker
       class Variation
         ImporterNotFoundError = Class.new(::RuntimeError)
         InvalidImporterFlagError = Class.new(::RuntimeError)
+
+        include Accessors
+        include Helpers
+        include WorkerApi
+
         attr_reader :cfg, :name, :data
 
         def initialize cfg, name, data
@@ -16,7 +21,9 @@ module DbSucker
 
           if @data["adapter"]
             begin
-              extend "DbSucker::Adapters::#{@data["adapter"].camelize}::RPC".constantize
+              adapter = "DbSucker::Adapters::#{@data["adapter"].camelize}::Api".constantize
+              adapter.require_dependencies
+              extend adapter
             rescue NameError => ex
               raise(AdapterNotFoundError, "variation `#{cfg.name}/#{name}' defines invalid adapter `#{@data["adapter"]}' (in `#{cfg.src}'): #{ex.message}", ex.backtrace)
             end
@@ -25,54 +32,9 @@ module DbSucker
           end
         end
 
-        # =============
-        # = Accessors =
-        # =============
-
-        def ctn
-          cfg
-        end
-
-        def source
-          ctn.source
-        end
-
-        def label
-          data["label"]
-        end
-
-        def incrementals
-          data["incremental"] || {}
-        end
-
-        def gzip_binary
-          source["gzip_binary"] || "gzip"
-        end
-
-        def integrity
-          (data["integrity"].nil? ? "shasum -ba512" : data["integrity"]).presence
-        end
-
-        def integrity?
-          ctn.integrity? && integrity
-        end
-
-        def copies_file?
-          data["file"]
-        end
-
-        def copies_file_compressed?
-          copies_file? && data["file"].end_with?(".gz")
-        end
-
-        def requires_uncompression?
-          !copies_file_compressed? || data["database"]
-        end
-
-        # ===========
-        # = RPC API =
-        # ===========
-
+        # ===============
+        # = Adapter API =
+        # ===============
         [
           :client_binary,
           :local_client_binary,
@@ -91,178 +53,6 @@ module DbSucker
 
         def dump_command_for table
           raise NotImplementedError, "your selected adapter `#{@data["adapter"]}' must implement `#dump_command_for(table)' for variation `#{cfg.name}/#{name}' (in `#{cfg.src}')"
-        end
-
-
-        # ====================
-        # = Internal helpers =
-        # ====================
-        def parse_flags flags
-          flags.to_s.split(" ").map(&:strip).reject(&:blank?).each_with_object({}) do |fstr, res|
-            if m = fstr.match(/\+(?<key>[^=]+)(?:=(?<value>))?/)
-              res[m[:key].strip] = m[:value].nil? ? true : m[:value]
-            elsif m = fstr.match(/\-(?<key>[^=]+)/)
-              res[m[:key]] = false
-            else
-              raise InvalidImporterFlagError, "invalid flag `#{fstr}' for variation `#{cfg.name}/#{name}' (in `#{cfg.src}')"
-            end
-          end
-        end
-
-        def channelfy_thread thr
-          def thr.active?
-            alive?
-          end
-
-          def thr.closed?
-            alive?
-          end
-
-          def thr.closing?
-            !alive?
-          end
-
-          thr
-        end
-
-        def local_execute cmd, opts = {}
-          opts = opts.reverse_merge(blocking: true, thread: false, close_stdin: false, close_stdouterr: false)
-          result = []
-          thr = channelfy_thread Thread.new {
-            Open3.popen2e(cmd, pgroup: true) do |_ipc_stdin, _ipc_stdouterr, _ipc_thread|
-              Thread.current[:ipc_thread] = _ipc_thread
-              Thread.current[:ipc_stdin] = _ipc_stdin
-              Thread.current[:ipc_stdouterr] = _ipc_stdouterr
-              _ipc_stdin.close if opts[:close_stdin]
-              _ipc_stdouterr.close if opts[:close_stdouterr]
-              while l = _ipc_stdouterr.gets
-                result << l.chomp
-              end
-              Thread.current[:exit_code] = _ipc_thread.value
-              if Thread.current[:exit_code] != 0
-                Thread.current[:error_message] = "#{result.last.try(:strip)} (exit #{Thread.current[:exit_code]})".strip
-                sleep 3
-              end
-            end
-          }
-          thr.join if opts[:blocking]
-          opts[:thread] ? [thr, result] : result
-        end
-
-
-        # ===============
-        # = API methods =
-        # ===============
-        def tables_to_transfer
-          all = cfg.table_list(cfg.data["source"]["database"]).map(&:first)
-          keep = []
-          if data["only"]
-            [*data["only"]].each do |t|
-              unless all.include?(t)
-                raise TableNotFoundError, "table `#{t}' for the database `#{cfg.source["database"]}' could not be found (provided by variation `#{cfg.name}/#{name}' in `#{cfg.src}')"
-              end
-              keep << t
-            end
-          elsif data["except"]
-            keep = all.dup
-            [*data["except"]].each do |t|
-              unless all.include?(t)
-                raise TableNotFoundError, "table `#{t}' for the database `#{cfg.source["database"]}' could not be found (provided by variation `#{cfg.name}/#{name}' in `#{cfg.src}')"
-              end
-              keep.delete(t)
-            end
-          else
-            keep = all.dup
-          end
-          keep -= data["ignore_always"] if data["ignore_always"].is_a?(Array)
-
-          [keep, all]
-        end
-
-        def constraint table
-          data["constraints"] && (data["constraints"][table] || data["constraints"]["__default"])
-        end
-
-        def dump_to_remote worker, blocking = true
-          cmd = dump_command_for(worker.table)
-          cmd << " > #{worker.tmp_filename(true)}"
-          [worker.tmp_filename(true), cfg.blocking_channel_result(cmd, channel: true, request_pty: true, blocking: blocking)]
-        end
-
-        def compress_file_command file, pv_binary = false
-          if pv_binary.presence
-            cmd = %{#{pv_binary} -n -b #{file} | #{gzip_binary} > #{file}.gz && rm #{file} }
-          else
-            cmd = %{#{gzip_binary} #{file}}
-          end
-          ["#{file}.gz", cmd]
-        end
-
-        def compress_file file, blocking = true
-          nfile, cmd = compress_file_command(file)
-          [nfile, cfg.blocking_channel_result(cmd, channel: true, request_pty: true, blocking: blocking)]
-        end
-
-        def calculate_local_integrity_hash file, blocking = true
-          return unless integrity?
-          cmd = "#{integrity} #{file}"
-          [cmd, local_execute(cmd, thread: !blocking, blocking: blocking, close_stdin: true)]
-        end
-
-
-
-
-
-
-
-
-
-
-
-        def wait_for_workers
-          channelfy_thread Thread.new {
-            loop do
-              Thread.current[:workers] = $importing.synchronize { $importing.length }
-              break if Thread.current[:workers] == 0
-              sleep 1
-            end
-          }
-        end
-
-        def load_local_file worker, file, &block
-          imp = data["importer"]
-          impf = parse_flags(data["importer_flags"])
-
-          if imp == "void10"
-            t = channelfy_thread Thread.new{ sleep 10 }
-          elsif imp == "sequel" || constraint(worker.table)
-            raise NotImplementedError, "SequelImporter is not yet implemented/ported to new db_sucker version!"
-            # imp_was_sequel = imp == "sequel"
-            # imp = "sequel"
-            # t = channelfy_thread Thread.new {
-            #   Thread.current[:importer] = imp = SequelImporter.new(worker, file, ignore_errors: !imp_was_sequel)
-            #   imp.start
-            # }
-          elsif imp == "binary"
-            t = channelfy_thread Thread.new{
-              cmd = load_command_for(file, impf.merge(dirty: impf[:dirty] && worker.deferred))
-              Open3.popen2e(cmd, pgroup: true) do |_ipc_stdin, _ipc_stdouterr, _ipc_thread|
-                outerr, exit_status = _ipc_stdouterr.read, _ipc_thread.value
-                if exit_status != 0
-                  Thread.current[:error_message] = outerr.strip
-                  sleep 3
-                end
-              end
-            }
-          else
-            raise ImporterNotFoundError, "variation `#{cfg.name}/#{name}' defines unknown importer `#{imp}' (in `#{cfg.src}')"
-          end
-
-          block.call(imp, t)
-        end
-
-        def dump_to_local_stream
-          raise NotImplemented
         end
       end
     end

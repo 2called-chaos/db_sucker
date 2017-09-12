@@ -15,6 +15,7 @@ module DbSucker
         @data = {
           database: nil,
           tables_transfer: nil,
+          tables_transfer_list: [],
           tables_total: nil,
           tables_done: 0,
         }

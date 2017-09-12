@@ -25,32 +25,28 @@ module DbSucker
       def uniqid
         Digest::SHA1.hexdigest(SecureRandom.urlsafe_base64(128))
       end
-      # def error_logger
-      #   sync do
-      #     @error_logger ||= begin
-      #       FileUtils.mkdir_p(File.dirname(core_logfile_errors))
-      #       Logger.new(core_logfile_errors, @opts[:log_keep], @opts[:log_size])
-      #     end
-      #   end
-      # end
 
-      # def dev_logger
-      #   sync do
-      #     @dev_logger ||= begin
-      #       FileUtils.mkdir_p(File.dirname(core_logfile_dev))
-      #       Logger.new(core_logfile_dev, @opts[:log_keep], @opts[:log_size])
-      #     end
-      #   end
-      # end
 
-      # def ban_logger
-      #   sync do
-      #     @ban_logger ||= begin
-      #       FileUtils.mkdir_p(File.dirname(core_logfile_bans))
-      #       Logger.new(core_logfile_bans, @opts[:log_keep], @opts[:log_size])
-      #     end
-      #   end
-      # end
+      # =================
+      # = Configuration =
+      # =================
+      def core_cfg_path
+        File.expand_path(ENV["DBS_CFGDIR"].presence || "~/.db_sucker")
+      end
+
+      def core_tmp_path
+        "#{File.expand_path(ENV["DBS_TMPDIR"] || ENV["TMPDIR"] || "/tmp")}/db_sucker_temp"
+      end
+
+      def core_cfg_configfile
+        "#{core_cfg_path}/config.rb"
+      end
+
+      def load_appconfig
+        return unless File.exist?(core_cfg_configfile)
+        eval File.read(core_cfg_configfile, encoding: "utf-8"), binding, core_cfg_configfile
+      end
+
 
       # ===================
       # = Signal trapping =
@@ -91,7 +87,7 @@ module DbSucker
       def fire which, *args
         return if @disable_event_firing
         sync { debug "[Event] Firing #{which} (#{@hooks[which].try(:length) || 0} handlers) #{args.map(&:class)}", 99 }
-        @hooks[which] && @hooks[which].each{|h| h.call(*args) }
+        @hooks[which] && @hooks[which].each{|h| h.call(self, *args) }
       end
     end
   end

@@ -136,39 +136,39 @@ module DbSucker
               _this = self
               target.instance_eval do
                 if _this.operror
-                  attron(color_pair(Window::COLOR_RED)|Window::A_BOLD) { addstr("#{_this.operror}") }
+                  red "#{_this.operror}"
                   return
                 end
 
                 if _this.closing
-                  attron(color_pair(Window::COLOR_RED)|Window::A_BOLD) { addstr("[CLOSING] ") }
+                  red "[CLOSING] "
                 end
 
                 if _this.status_format == :none
-                  attron(color_pair(Window::COLOR_BLUE)|Window::A_BOLD) { addstr("#{_this.label}") }
+                  blue "#{_this.label}"
                   break
                 end
 
                 case _this.state
                 when :idle, :init
-                  attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr("#{_this.label}: ") }
-                  attron(color_pair(Window::COLOR_GRAY)|Window::A_BOLD) { addstr(" initiating...") }
+                  yellow "#{_this.label}: "
+                  gray " initiating..."
                 when :finishing
-                  attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr("#{_this.label}: ") }
-                  attron(color_pair(Window::COLOR_GRAY)|Window::A_BOLD) { addstr(" finishing...") }
+                  yellow "#{_this.label}: "
+                  gray " finishing..."
                 when :verifying
-                  attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr("#{_this.label}: ") }
-                  attron(color_pair(Window::COLOR_GRAY)|Window::A_BOLD) { addstr(" verifying...") }
+                  yellow "#{_this.label}: "
+                  gray " verifying..."
                 when :done
                   fperc = f_percentage(_this.offset, _this.filesize)
                   if _this.offset == _this.filesize
-                    attron(color_pair(Window::COLOR_GREEN)|Window::A_BOLD) { addstr("#{_this.entity || _this.label} complete: #{fperc}") }
-                    attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr(" – ") }
-                    attron(color_pair(Window::COLOR_CYAN)|Window::A_BOLD) { addstr("#{human_bytes _this.offset}") }
+                    green "#{_this.entity || _this.label} complete: #{fperc}"
+                    yellow " – "
+                    cyan "#{human_bytes _this.offset}"
                   else
-                    attron(color_pair(Window::COLOR_RED)|Window::A_BOLD) { addstr("#{_this.entity || _this.label} INCOMPLETE: #{fperc}") }
-                    attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr(" – ") }
-                    attron(color_pair(Window::COLOR_CYAN)|Window::A_BOLD) { addstr("#{human_bytes _this.offset}/#{human_bytes _this.filesize}") }
+                    red "#{_this.entity || _this.label} INCOMPLETE: #{fperc}"
+                    yellow " – "
+                    cyan "#{human_bytes _this.offset}/#{human_bytes _this.filesize}"
                   end
                 when :downloading, :copying, :decompressing, :working
                   bytes_remain = _this.filesize - _this.offset
@@ -182,30 +182,30 @@ module DbSucker
                   end
                   eta = bps.zero? ? "?:¿?:¿?" : human_seconds2(bytes_remain / bps)
 
-                  attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr("#{_this.label}: ") }
+                  yellow "#{_this.label}: "
                   diffp = _this.offset == 0 ? 0 : _this.offset.to_d / _this.filesize.to_d * 100.to_d
-                  color = diffp > 90 ? Window::COLOR_GREEN : diffp > 75 ? Window::COLOR_BLUE : diffp > 50 ? Window::COLOR_CYAN : diffp > 25 ? Window::COLOR_YELLOW : Window::COLOR_RED
-                  attron(color_pair(color)|Window::A_NORMAL) { addstr(f_percentage(_this.offset, _this.filesize).rjust(7, " ") << " ") }
+                  color = diffp > 90 ? :green : diffp > 75 ? :blue : diffp > 50 ? :cyan : diffp > 25 ? :yellow : :red
+                  send(color, f_percentage(_this.offset, _this.filesize).rjust(7, " ") << " ")
 
                   if _this.status_format == :minimal
-                    attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr("[#{eta}]") }
+                    yellow "[#{eta}]"
                   elsif _this.status_format == :full
-                    attron(color_pair(Window::COLOR_YELLOW)|Window::A_BOLD) { addstr("[#{eta} – #{human_bytes(bps).rjust(9, " ")}/s]") }
+                    yellow "[#{eta} – #{human_bytes(bps).rjust(9, " ")}/s]"
                   end
 
                   if _this.status_format == :full
                     f_has = human_bytes _this.offset
                     f_tot = human_bytes _this.filesize
-                    attron(color_pair(Window::COLOR_GRAY)|Window::A_BOLD) { addstr(" [#{f_has.rjust(f_tot.length, "0")}/#{f_tot}]") }
+                    gray " [#{f_has.rjust(f_tot.length, "0")}/#{f_tot}]"
                   end
 
                   # progress bar
                   max = cols - stdscr.curx - 3
                   pnow = (max.to_d * (diffp / 100.to_d)).ceil.to_i
-                  attron(color_pair(Window::COLOR_YELLOW)|Window::A_NORMAL) { addstr(" [") }
-                  attron(color_pair(color)|Window::A_NORMAL) { addstr("".ljust(pnow, "#")) }
-                  attron(color_pair(Window::COLOR_GRAY)|Window::A_NORMAL) { addstr("".ljust(max - pnow, ".")) }
-                  attron(color_pair(Window::COLOR_YELLOW)|Window::A_NORMAL) { addstr("]") }
+                  yellow " ["
+                  send(color, "".ljust(pnow, "#"))
+                  gray "".ljust(max - pnow, ".")
+                  yellow "]"
 
                   _this.last_offset = _this.offset
                   _this.last_time = Time.now

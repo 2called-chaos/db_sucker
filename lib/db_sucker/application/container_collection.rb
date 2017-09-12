@@ -1,8 +1,9 @@
 module DbSucker
   class Application
     class ContainerCollection
-      attr_reader :app, :data
       DuplicateIdentifierError = Class.new(::ArgumentError)
+
+      attr_reader :app, :data
 
       def initialize app
         @app = app

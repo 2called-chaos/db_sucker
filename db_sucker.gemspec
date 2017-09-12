@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
   spec.version       = DbSucker::VERSION
   spec.authors       = ["Sven Pachnit"]
   spec.email         = ["sven@bmonkeys.net"]
-  spec.summary       = %q{Sucks all your remote MySQL databases via SSH for local tampering.}
+  spec.summary       = %q{Sucks your remote databases via SSH for local tampering.}
   spec.description   = %q{Suck whole databases, tables and even incremental updates and save your presets for easy reuse.}
   spec.homepage      = "https://github.com/2called-chaos/db_sucker"
   spec.license       = "MIT"

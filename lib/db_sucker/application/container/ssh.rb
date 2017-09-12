@@ -3,6 +3,7 @@ module DbSucker
     class Container
       module SSH
         CommandExecutionError = Class.new(::RuntimeError)
+
         begin # SSH
           def ssh_begin
             debug "Opening SSH connection for identifier `#{name}'"

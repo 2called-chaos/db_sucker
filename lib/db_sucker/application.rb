@@ -1,25 +1,17 @@
 module DbSucker
   class Application
     attr_reader :opts, :cfg, :sklaventreiber, :boot
-    # attr_reader :opts, :threads, :hooks, :stats, :window, :db, :backbuffer, :triggers, :assessors, :delayed_ip_queue, :delayed_ip_queue_monitor
-    # attr_accessor :status
-    # include Helper
     include Core
     include Colorize
     include OutputHelper
-    # include Core
-    # include Controls
-    # include Database
     include Dispatch
 
-    # =========
-    # = Setup =
-    # =========
+    # main dispatch routine for application
     def self.dispatch *a
       new(*a) do |app|
-        Thread.main[:app] = app
-        app.load_appconfig
         begin
+          Thread.main[:app] = app
+          app.load_appconfig
           app.parse_params
           app.dispatch
           app.haltpoint
@@ -29,6 +21,7 @@ module DbSucker
           app.fire(:core_exception, ex)
           app.abort("#{ex.message}", false)
           app.log app.c("Run `#{$0} --help' for more info", :blue)
+          exit 1
         rescue StandardError => ex
           app.fire(:core_exception, ex)
           app.warn app.c("[FATAL] #{ex.class}: #{ex.message}", :red)
@@ -116,28 +109,6 @@ module DbSucker
 
     def parse_params
       @optparse.parse!(@argv)
-    end
-
-
-
-    # =================
-    # = Configuration =
-    # =================
-    def core_cfg_path
-      File.expand_path(ENV["DBS_CFGDIR"].presence || "~/.db_sucker")
-    end
-
-    def core_tmp_path
-      "#{File.expand_path(ENV["DBS_TMPDIR"] || ENV["TMPDIR"] || "/tmp")}/db_sucker_temp"
-    end
-
-    def core_cfg_configfile
-      "#{core_cfg_path}/config.rb"
-    end
-
-    def load_appconfig
-      return unless File.exist?(core_cfg_configfile)
-      eval File.read(core_cfg_configfile, encoding: "utf-8"), binding, core_cfg_configfile
     end
   end
 end

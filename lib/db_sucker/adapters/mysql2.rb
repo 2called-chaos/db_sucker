@@ -1,9 +1,11 @@
 module DbSucker
   module Adapters
     module Mysql2
-      begin; require "mysql2"; rescue LoadError; end
+      module Api
+        def self.require_dependencies
+          begin; require "mysql2"; rescue LoadError; end
+        end
 
-      module RPC
         def client_binary
           source["client_binary"] || "mysql"
         end
