@@ -113,7 +113,7 @@ module DbSucker
 
           def blocking_channel_result cmd, opts = {}
             opts = opts.reverse_merge(ssh: nil, blocking: true, channel: false, request_pty: false)
-            result = []
+            result = EventedResultset.new
             chan = send(opts[:blocking] ? :blocking_channel : :nonblocking_channel, opts[:ssh]) do |ch|
               chproc = ->(ch, cmd, result) {
                 ch.exec(cmd) do |ch, success|
@@ -121,15 +121,15 @@ module DbSucker
 
                   # "on_data" is called when the process writes something to stdout
                   ch.on_data do |c, data|
-                    result << data
+                    result.enq(data, :stdout)
                   end
 
                   # "on_extended_data" is called when the process writes something to stderr
                   ch.on_extended_data do |c, type, data|
-                    result << data
+                    result.enq(data, :stderr)
                   end
 
-                  ch.on_close { }
+                  ch.on_close { result.close! }
                 end
               }
               if opts[:request_pty]
