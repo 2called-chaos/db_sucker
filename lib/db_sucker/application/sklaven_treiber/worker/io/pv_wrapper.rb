@@ -5,6 +5,7 @@ module DbSucker
         module IO
           class PvWrapper < Base
             NoCommandError = Class.new(::ArgumentError)
+            attr_reader :result
             attr_writer :filesize
             attr_accessor :cmd
 
@@ -57,7 +58,7 @@ module DbSucker
             def _perform_with_wrapper
               reset_state
               @state = :working
-              channel, result = @ctn.nonblocking_channel_result(cmd, channel: true, request_pty: true)
+              channel, @result = @ctn.nonblocking_channel_result(cmd, channel: true, request_pty: true)
 
               killer = Thread.new do
                 loop do
@@ -71,7 +72,7 @@ module DbSucker
                 end
               end
 
-              result.each_linex {|grp, line| @offset = line.to_i }
+              @result.each_linex {|grp, line| @offset = line.to_i }
               killer.join
             end
           end
