@@ -29,7 +29,7 @@ module DbSucker
                   begin
                     _perform_with_wrapper
                     @state = :done
-                    @on_success.call(self)
+                    @on_success.call(self) if !@closing && !@worker.should_cancel
                   rescue StandardError => ex
                     @operror = "#{ex.class}: #{ex.message}"
                     @on_error.call(self, ex, @operror)
@@ -44,7 +44,7 @@ module DbSucker
               else
                 begin
                   @fallback.call
-                  @on_success.call(self)
+                  @on_success.call(self) if !@closing && !@worker.should_cancel
                 rescue StandardError => ex
                   @on_error.call(self, ex, @operror)
                   raise

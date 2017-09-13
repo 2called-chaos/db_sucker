@@ -31,6 +31,11 @@ module DbSucker
                 gz = Zlib::GzipReader.new(@in_file)
                 begin
                   while buf = gz.read(opts[:read_size])
+                    if !@closing && @abort_if.call(self)
+                      @closing = true
+                      break
+                    end
+
                     @offset += [opts[:read_size], @filesize - @offset].min
                     @out_file.syswrite(buf)
                   end
@@ -45,7 +50,7 @@ module DbSucker
                 File.unlink(@remote) unless @preserve_original
 
                 @state = :done
-                @on_success.call(self)
+                @on_success.call(self) if !@closing && !@worker.should_cancel
               rescue StandardError => ex
                 @operror = "##{try} #{ex.class}: #{ex.message}"
                 @on_error.call(self, ex, @operror)

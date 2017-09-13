@@ -53,7 +53,7 @@ module DbSucker
                 end
 
                 @state = :done
-                @on_success.call(self)
+                @on_success.call(self) if !@closing && !@worker.should_cancel
               rescue StandardError => ex
                 @operror = "##{try} #{ex.class}: #{ex.message}"
                 @on_error.call(self, ex, @operror)
