@@ -114,13 +114,17 @@ module DbSucker
 
           def kill_remote_process pid, sig = :INT
             ssh_start(true) do |ssh|
-              blocking_channel_result("kill -#{sig} #{pid}", ssh: nil)
+              blocking_channel_result("kill -#{sig} #{pid}", ssh: ssh)
             end
           end
 
           def blocking_channel_result cmd, opts = {}
             opts = opts.reverse_merge(ssh: nil, blocking: true, channel: false, request_pty: false, use_sh: false)
-            cmd = %{/bin/sh -c 'echo $$ && exec #{cmd}'} if opts[:use_sh]
+            if opts[:use_sh]
+              cmd = %{/bin/sh -c 'echo $$ && exec #{cmd}'}
+              pid_monitor = Monitor.new
+              pid_signal = pid_monitor.new_cond
+            end
             result = EventedResultset.new
             chan = send(opts[:blocking] ? :blocking_channel : :nonblocking_channel, opts[:ssh]) do |ch|
               chproc = ->(ch, cmd, result) {
@@ -132,6 +136,7 @@ module DbSucker
                     if opts[:use_sh] && result.empty?
                       ch[:pid] = data.to_i
                       ch[:pid] = false if ch[:pid].zero?
+                      pid_monitor.synchronize { pid_signal.broadcast } if opts[:use_sh]
                       next
                     end
                     result.enq(data, :stdout)
@@ -155,6 +160,7 @@ module DbSucker
                 chproc.call(ch, cmd, result)
               end
             end
+            pid_monitor.synchronize { pid_signal.wait if !chan[:pid] } if opts[:use_sh]
             opts[:channel] ? [chan, result] : result
           end
 
