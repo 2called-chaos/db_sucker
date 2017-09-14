@@ -58,12 +58,13 @@ module DbSucker
             def _perform_with_wrapper
               reset_state
               @state = :working
-              channel, @result = @ctn.nonblocking_channel_result(cmd, channel: true, request_pty: true)
+              channel, @result = @ctn.nonblocking_channel_result(cmd, channel: true, use_sh: true)
 
               killer = Thread.new do
                 loop do
                   if @worker.should_cancel && !Thread.current[:canceled]
-                    channel.send_data("\C-c") rescue false
+                    channel.send_data("\C-c") rescue false if channel.is_a?(Net::SSH::Connection::Channel) && channel[:pty]
+                    @ctn.kill_remote_process(channel[:pid]) if channel.is_a?(Net::SSH::Connection::Channel) && channel[:pid]
                     channel.close rescue false
                     Thread.current[:canceled] = true
                   end

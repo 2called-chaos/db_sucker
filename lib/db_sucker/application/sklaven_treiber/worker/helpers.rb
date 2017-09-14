@@ -38,9 +38,10 @@ module DbSucker
               Thread.current[:iteration] = initial
               loop do
                 if @should_cancel && !Thread.current[:canceled]
-                  channel.send_data("\C-c") rescue false if channel.is_a?(Net::SSH::Connection::Channel)
-                  Process.kill(:SIGINT, channel[:ipc_thread].pid) if channel[:ipc_thread]
+                  channel.send_data("\C-c") rescue false if channel.is_a?(Net::SSH::Connection::Channel) && channel[:pty]
+                  @ctn.kill_remote_process(channel[:pid]) if channel.is_a?(Net::SSH::Connection::Channel) && channel[:pid]
                   channel.close rescue false
+                  Process.kill(:SIGINT, channel[:ipc_thread].pid) if channel[:ipc_thread]
                   Thread.current[:canceled] = true
                 end
                 stat = status.gsub(":seconds", human_seconds(Thread.current[:iteration]/10))

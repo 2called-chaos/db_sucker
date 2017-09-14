@@ -112,8 +112,15 @@ module DbSucker
             end
           end
 
+          def kill_remote_process pid, sig = :INT
+            ssh_start(true) do |ssh|
+              blocking_channel_result("kill -#{sig} #{pid}", ssh: nil)
+            end
+          end
+
           def blocking_channel_result cmd, opts = {}
-            opts = opts.reverse_merge(ssh: nil, blocking: true, channel: false, request_pty: false)
+            opts = opts.reverse_merge(ssh: nil, blocking: true, channel: false, request_pty: false, use_sh: false)
+            cmd = %{/bin/sh -c 'echo $$ && exec #{cmd}'} if opts[:use_sh]
             result = EventedResultset.new
             chan = send(opts[:blocking] ? :blocking_channel : :nonblocking_channel, opts[:ssh]) do |ch|
               chproc = ->(ch, cmd, result) {
@@ -122,6 +129,11 @@ module DbSucker
 
                   # "on_data" is called when the process writes something to stdout
                   ch.on_data do |c, data|
+                    if opts[:use_sh] && result.empty?
+                      ch[:pid] = data.to_i
+                      ch[:pid] = false if ch[:pid].zero?
+                      next
+                    end
                     result.enq(data, :stdout)
                   end
 
@@ -136,6 +148,7 @@ module DbSucker
               if opts[:request_pty]
                 ch.request_pty do |ch, success|
                   raise CommandExecutionError, "could not obtain pty" unless success
+                  ch[:pty] = true
                   chproc.call(ch, cmd, result)
                 end
               else

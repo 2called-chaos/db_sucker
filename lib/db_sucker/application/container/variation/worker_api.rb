@@ -32,7 +32,7 @@ module DbSucker
           def dump_to_remote worker, blocking = true
             cmd = dump_command_for(worker.table)
             cmd << " > #{worker.tmp_filename(true)}"
-            [worker.tmp_filename(true), cfg.blocking_channel_result(cmd, channel: true, request_pty: true, blocking: blocking)]
+            [worker.tmp_filename(true), cfg.blocking_channel_result(cmd, channel: true, use_sh: true, blocking: blocking)]
           end
 
           def compress_file_command file, pv_binary = false
@@ -46,7 +46,7 @@ module DbSucker
 
           def compress_file file, blocking = true
             nfile, cmd = compress_file_command(file)
-            [nfile, cfg.blocking_channel_result(cmd, channel: true, request_pty: true, blocking: blocking)]
+            [nfile, cfg.blocking_channel_result(cmd, channel: true, use_sh: true, blocking: blocking)]
           end
 
           def calculate_local_integrity_hash file, blocking = true
