@@ -22,7 +22,7 @@ module DbSucker
           if @data["adapter"]
             begin
               adapter = "DbSucker::Adapters::#{@data["adapter"].camelize}::Api".constantize
-              adapter.require_dependencies
+              @cfg.app.sync { adapter.require_dependencies }
               extend adapter
             rescue NameError => ex
               raise(AdapterNotFoundError, "variation `#{cfg.name}/#{name}' defines invalid adapter `#{@data["adapter"]}' (in `#{cfg.src}'): #{ex.message}", ex.backtrace)

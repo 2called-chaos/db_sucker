@@ -24,7 +24,7 @@ module DbSucker
 
         begin
           adapter = "DbSucker::Adapters::#{source["adapter"].camelize}::Api".constantize
-          adapter.require_dependencies
+          app.sync { adapter.require_dependencies }
           extend adapter
         rescue NameError => ex
           raise(AdapterNotFoundError, "identifier `#{name}' defines invalid source adapter `#{source["adapter"]}' (in `#{@src}'): #{ex.message}", ex.backtrace)
