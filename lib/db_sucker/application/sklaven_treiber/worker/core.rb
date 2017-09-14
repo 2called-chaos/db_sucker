@@ -56,6 +56,7 @@ module DbSucker
             @local_files_to_remove = []
             current_perform = nil
 
+            app.fire(:worker_routine_before_all, self)
             catch :abort_execution do
               perform.each_with_index do |m, i|
                 current_perform = m
@@ -64,8 +65,10 @@ module DbSucker
                 r = catch(:abort_execution) {
                   begin
                     r0 = Time.current
+                    app.fire(:worker_routine_before, self, current_perform)
                     send(:"_#{m}")
                   ensure
+                    app.fire(:worker_routine_after, self, current_perform)
                     @timings[m] = Time.current - r0
                   end
                   nil
@@ -93,6 +96,7 @@ module DbSucker
               File.unlink(file) rescue false
             end
 
+            app.fire(:worker_routine_after_all, self)
             @state = :done if !canceled? && !failed?
             @ended = Time.current
             @sshing = false

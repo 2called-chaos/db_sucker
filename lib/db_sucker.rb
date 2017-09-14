@@ -62,3 +62,4 @@ require "db_sucker/adapters/mysql2"
 # patches
 require "db_sucker/patches/net-sftp"
 require "db_sucker/patches/thread-count"
+require "db_sucker/patches/developer"
