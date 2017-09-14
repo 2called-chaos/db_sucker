@@ -48,7 +48,6 @@ module DbSucker
 
               pv.fallback do
                 cmd, (channel, pv.result) = ctn.calculate_remote_integrity_hash(@remote_file_raw, false)
-                Thread.main[:app].debug cmd
                 second_progress(channel, "calculating integrity hash for raw file (:seconds)...").join
               end
 
@@ -91,9 +90,29 @@ module DbSucker
 
           def _r_calculate_compressed_hash
             @status = ["calculating integrity hash for compressed file...", "yellow"]
-            cmd, (channel, result) = ctn.calculate_remote_integrity_hash(@remote_file_compressed, false)
-            second_progress(channel, "calculating integrity hash for compressed file (:seconds)...").join
-            @integrity[:compressed] = result.join.split(" ").first.try(:strip).presence
+
+            pv_wrap(@ctn, nil) do |pv|
+              pv.enabled do |pvbinary|
+                pv.filesize = @remote_file_raw_filesize
+                pv.label = "hashing compressed file"
+                pv.entity = "hashing compressed file"
+                pv.status_format = app.opts[:status_format]
+                @status = [pv, "yellow"]
+                pv.abort_if { @should_cancel }
+                pv.cmd = ctn.calculate_remote_integrity_hash_command(@remote_file_compressed, pvbinary)
+              end
+
+              pv.fallback do
+                cmd, (channel, pv.result) = ctn.calculate_remote_integrity_hash(@remote_file_compressed, false)
+                second_progress(channel, "calculating integrity hash for compressed file (:seconds)...").join
+              end
+
+              pv.on_success do
+                @integrity[:compressed] = pv.result.for_group(:stdout).join.split(" ").first.try(:strip).presence
+              end
+
+              pv.perform!
+            end
           end
 
           def _l_download_file
