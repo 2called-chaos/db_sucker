@@ -11,6 +11,14 @@ module DbSucker
             succeeded? || failed? || canceled?
           end
 
+          def terminated?
+            @ended
+          end
+
+          def alive?
+            !terminated?
+          end
+
           def failed?
             @state == :failed
           end

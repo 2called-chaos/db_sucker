@@ -113,7 +113,7 @@ module DbSucker
 
       def _start_ssh_poll
         @poll = Thread.new do
-          @ctn.loop_ssh(0.1) { @workers.reject(&:done?).any? }
+          @ctn.loop_ssh(0.1) { @workers.select(&:alive?).any? }
         end
       end
 

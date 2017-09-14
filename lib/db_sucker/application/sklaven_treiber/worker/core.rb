@@ -82,8 +82,8 @@ module DbSucker
               File.unlink(file) rescue false
             end
 
-            @ended = Time.current
             @state = :done if !canceled? && !failed?
+            @ended = Time.current
 
             # debug timings
             debug "[Timings(#{table})] all: #{human_seconds(@timings.values.sum, 3)}, #{@timings.map{|a,t| "#{a}: #{human_seconds(t, 3)}" } * ", "}", 50
