@@ -114,6 +114,7 @@ module DbSucker
       def _start_ssh_poll
         @poll = Thread.new do
           Thread.current[:itype] = :sklaventreiber_ssh_poll
+          Thread.current.priority = @app.opts[:tp_sklaventreiber_ssh_poll]
           Thread.current[:iteration] = 0
           @ctn.loop_ssh(0.1) {
             Thread.current[:iteration] += 1
@@ -139,6 +140,7 @@ module DbSucker
         # control thread
         ctrlthr = Thread.new do
           Thread.current[:itype] = :sklaventreiber_worker_ctrl
+          Thread.current.priority = @app.opts[:tp_sklaventreiber_worker_ctrl]
           loop do
             if $core_runtime_exiting && $core_runtime_exiting < 100
               $core_runtime_exiting += 100
@@ -166,6 +168,7 @@ module DbSucker
           @status = ["starting consumer #{wi+1}/#{cnum}", "blue"]
           @threads << Thread.new {
             Thread.current[:itype] = :sklaventreiber_worker
+            Thread.current.priority = @app.opts[:tp_sklaventreiber_worker]
             Thread.current[:managed_worker] = wi
             sleep 0.1 until Thread.current[:start] || $core_runtime_exiting
             _queueoff

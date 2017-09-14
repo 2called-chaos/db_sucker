@@ -36,6 +36,7 @@ module DbSucker
             result = []
             thr = channelfy_thread Thread.new {
               Thread.current[:itype] = :sklaventreiber_worker_local_execute
+              Thread.current.priority = @cfg.app.opts[:tp_sklaventreiber_worker_local_execute]
               Thread.current[:executing] = cmd
               Open3.popen2e(cmd, pgroup: true) do |_ipc_stdin, _ipc_stdouterr, _ipc_thread|
                 Thread.current[:ipc_thread] = _ipc_thread

@@ -23,6 +23,7 @@ module DbSucker
       def start_loop refresh_delay
         @loop = Thread.new do
           Thread.current[:itype] = :window_draw_loop
+          Thread.current.priority = @app.opts[:tp_window_draw_loop]
           loop do
             break if Thread.current[:stop]
             refresh_screen if app.opts[:window_draw]
@@ -31,6 +32,7 @@ module DbSucker
         end
         @keyloop = Thread.new do
           Thread.current[:itype] = :window_keypad_loop
+          Thread.current.priority = @app.opts[:tp_window_keypad_loop]
           Thread.current[:monitor] = Monitor.new
           loop do
             ch = getch

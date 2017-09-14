@@ -61,6 +61,7 @@ module DbSucker
 
               killer = Thread.new do
                 Thread.current[:itype] = :sklaventreiber_worker_io_pv_killer
+                Thread.current.priority = @worker.app.opts[:tp_sklaventreiber_worker_io_pv_killer]
                 loop do
                   if @worker.should_cancel && !Thread.current[:canceled]
                     if channel.is_a?(Net::SSH::Connection::Channel)

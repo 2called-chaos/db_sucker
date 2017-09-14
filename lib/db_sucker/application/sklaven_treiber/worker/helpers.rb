@@ -36,6 +36,7 @@ module DbSucker
           def second_progress channel, status, color = :yellow
             Thread.new do
               Thread.current[:itype] = :sklaventreiber_worker_second_progress
+              Thread.current.priority = app.opts[:tp_sklaventreiber_worker_second_progress]
               Thread.current[:iteration] = 0
               Thread.current[:started_at] = Time.current
               loop do
