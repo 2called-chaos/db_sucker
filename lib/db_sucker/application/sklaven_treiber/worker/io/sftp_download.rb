@@ -26,7 +26,7 @@ module DbSucker
                 reset_state
                 @ctn.sftp_start(opts[:force_new_connection]) do |sftp|
                   @filesize = sftp.lstat!(@remote).size
-                  sftp.download!(@remote, @local, read_size: opts[:read_size]) do |event, downloader, *args|
+                  sftp.download!(@remote, @local, read_size: opts[:read_size], requests: 1) do |event, downloader, *args|
                     if !@closing && @abort_if.call(self, event, downloader, *args)
                       downloader.abort!
                       @closing = true
