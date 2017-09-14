@@ -7,8 +7,8 @@ module DbSucker
             UnknownFormatterError = Class.new(::ArgumentError)
             DataIntegrityError = Class.new(::RuntimeError)
             STATUS_FORMATTERS = [:none, :minimal, :full]
-            attr_reader :status_format, :state, :operror, :filesize, :offset, :closing, :local, :remote, :ctn
-            attr_accessor :read_size, :last_offset, :last_time, :label, :entity
+            attr_reader :status_format, :state, :operror, :offset, :closing, :local, :remote, :ctn
+            attr_accessor :read_size, :last_offset, :last_time, :label, :entity, :filesize
             OutputHelper.hook(self)
 
             def initialize worker, ctn, fd

@@ -25,7 +25,7 @@ module DbSucker
                 @tmploc   = @use_tmp ? "#{@local}.tmp" : @local
                 @in_file  = File.new(@remote, "rb")
                 @out_file = File.new(@tmploc, "wb")
-                @filesize = @in_file.size
+                @filesize ||= @in_file.size
 
                 @state = :decompressing
                 gz = Zlib::GzipReader.new(@in_file)

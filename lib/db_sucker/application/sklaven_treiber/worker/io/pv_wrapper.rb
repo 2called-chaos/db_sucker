@@ -5,7 +5,6 @@ module DbSucker
         module IO
           class PvWrapper < Base
             NoCommandError = Class.new(::ArgumentError)
-            attr_writer :filesize
             attr_accessor :cmd, :result
 
             def init

@@ -169,6 +169,7 @@ module DbSucker
             @status = ["#{label}...", :yellow]
 
             file_gunzip(@ctn, @local_file_compressed) do |fc|
+              fc.filesize = @remote_file_raw_filesize
               fc.label = label
               fc.status_format = app.opts[:status_format]
               @status = [fc, "yellow"]
