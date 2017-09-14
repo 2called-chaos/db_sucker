@@ -20,15 +20,15 @@ module DbSucker
         end
 
         def puts *args
-          sync { @spool << [:puts, args, Time.now] }
+          sync { @spool << [:puts, args, Time.current] }
         end
 
         def print *args
-          sync { @spool << [:print, args, Time.now] }
+          sync { @spool << [:print, args, Time.current] }
         end
 
         def warn *args
-          sync { @spool << [:warn, args, Time.now] }
+          sync { @spool << [:warn, args, Time.current] }
         end
       end
     end

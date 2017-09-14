@@ -103,7 +103,7 @@ module DbSucker
                   bytes_remain = @filesize - @offset
                   if @last_time
                     offset_diff = @offset - @last_offset
-                    time_diff = (Time.now - @last_time).to_d
+                    time_diff = (Time.current - @last_time).to_d
                     bps = (time_diff * offset_diff.to_d) * (1.to_d/time_diff)
                   else
                     offset_diff = 0
@@ -127,7 +127,7 @@ module DbSucker
 
 
                   @last_offset = @offset
-                  @last_time = Time.now
+                  @last_time = Time.current
                 end
               end * " "
             end
@@ -174,7 +174,7 @@ module DbSucker
                   bytes_remain = _this.filesize - _this.offset
                   if _this.last_time
                     offset_diff = _this.offset - _this.last_offset
-                    time_diff = (Time.now - _this.last_time).to_d
+                    time_diff = (Time.current - _this.last_time).to_d
                     bps = (time_diff * offset_diff.to_d) * (1.to_d/time_diff)
                   else
                     offset_diff = 0
@@ -208,7 +208,7 @@ module DbSucker
                   yellow "]"
 
                   _this.last_offset = _this.offset
-                  _this.last_time = Time.now
+                  _this.last_time = Time.current
                 end
               end
             end
