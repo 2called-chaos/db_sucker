@@ -29,12 +29,47 @@ module DbSucker
             sleep refresh_delay
           end
         end
+        @keyloop = Thread.new do
+          Thread.current[:itype] = :window_keypad_loop
+          Thread.current[:monitor] = Monitor.new
+          loop do
+            ch = getch
+            Thread.current[:monitor].synchronize do
+              case ch
+              when "P" # kill SSH poll
+                sklaventreiber.poll.try(:kill)
+              when "T" # dump threads (development)
+                dump_file = "#{app.core_tmp_path}/threaddump-#{Time.current.to_i}.log"
+                File.open(dump_file, "wb") do |f|
+                  f.puts "#{Thread.list.length} threads:\n"
+                  Thread.list.each do |thr|
+                    f.puts "#{thr.inspect}"
+                    f.puts "   iType: #{thr == Thread.main ? :main_thread : thr[:itype] || :uncategorized}"
+                    f.puts "   Group: #{thr.group}"
+                    f.puts "  T-Vars: #{thr.thread_variables.inspect}"
+                    thr.thread_variables.each {|k| f.puts "          #{k} => #{thr.thread_variable(k)}" }
+                    f.puts "  F-Vars: #{thr.keys.inspect}"
+                    thr.keys.each {|k| f.puts "          #{k} => #{thr[k]}" }
+                  end
+                end
+                fork { exec("subl -w #{Shellwords.shellescape dump_file} && rm #{Shellwords.shellescape dump_file}") }
+              else
+                addstr "#{ch}\n"
+              end
+            end
+          end
+        end if @app.opts[:window_keypad]
       end
 
       def stop_loop
         return unless @loop
         @loop[:stop] = true
         @loop.join
+        if @keyloop
+          @keyloop[:monitor].synchronize do
+            @keyloop.try(:kill)
+          end
+        end
       end
 
       def line l = 1
@@ -113,10 +148,12 @@ module DbSucker
         app.debug "Entering curses screen mode"
         init_screen
         nl
-        # noecho
-        # cbreak
-        # raw
-        # stdscr.keypad = true
+        if @app.opts[:window_keypad]
+          noecho
+          cbreak
+          # raw
+          stdscr.keypad = true
+        end
 
         # colors
         start_color

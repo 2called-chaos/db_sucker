@@ -1,7 +1,7 @@
 module DbSucker
   class Application
     class SklavenTreiber
-      attr_reader :app, :trxid, :window, :data, :status, :monitor, :workers
+      attr_reader :app, :trxid, :window, :data, :status, :monitor, :workers, :poll
 
       def initialize app, trxid
         @app = app

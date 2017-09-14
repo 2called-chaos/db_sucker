@@ -66,11 +66,11 @@ module DbSucker
         status_format: :full,    # used for IO operations, can be one of: none, minimal, full
         pv_enabled: true,        # disable pv utility autodiscovery (force non-usage)
 
-
         # sklaven treiber
         window_enabled: true, # if disabled effectively disables any status progress or window drawing
         window_draw: true, # wether to refresh screen or not
         window_refresh_delay: 0.25, # refresh screen every so many seconds
+        window_keypad: true, # allow keyboard controls
         consumers: 10, # amount of workers to run at the same time
 
         # amount of workers that can use a slot, false to disable
