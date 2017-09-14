@@ -78,6 +78,7 @@ module DbSucker
         # slot_sftp: false,
       }
       init_params
+      Tie.hook_all!(self)
       yield(self)
     end
 
