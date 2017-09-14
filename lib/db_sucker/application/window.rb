@@ -67,9 +67,16 @@ module DbSucker
       end
 
       def refresh_screen
-        @monitor.synchronize do
-          @t += 1
-          update { __send__(:"_view_#{@view}") }
+        rt = Benchmark.realtime do
+          @monitor.synchronize do
+            @t += 1
+            update { __send__(:"_view_#{@view}") }
+          end
+        end
+        if rt > 0.020
+          Thread.main[:app].warning "window render took: #{"%.6f" % rt}"
+        else
+          Thread.main[:app].debug "window render took: #{"%.6f" % rt}", 125
         end
       rescue StandardError => ex
         Thread.main[:app].notify_exception("DbSucker::Window encountered an render error on tick ##{@t}", ex)
