@@ -5,9 +5,8 @@ module DbSucker
         module IO
           class PvWrapper < Base
             NoCommandError = Class.new(::ArgumentError)
-            attr_reader :result
             attr_writer :filesize
-            attr_accessor :cmd
+            attr_accessor :cmd, :result
 
             def init
               @enabled ||= Proc.new {}
@@ -73,7 +72,10 @@ module DbSucker
                 end
               end
 
-              @result.each_linex {|grp, line| @offset = line.to_i }
+              @result.each_linex do |grp, line|
+                next unless grp == :stderr
+                @offset = line.to_i
+              end
               killer.join
             end
           end

@@ -46,10 +46,19 @@ module DbSucker
         @_pv_utility
       end
 
-      def calculate_remote_integrity_hash file, blocking = true
+      def calculate_remote_integrity_hash_command file, pv_binary = false
         return unless integrity?
-        cmd = %{#{integrity} #{file}}
-        [cmd, blocking_channel_result(cmd, channel: true, request_pty: true, blocking: blocking)]
+        if pv_binary.presence
+          %{#{pv_binary} -n -b #{file} | #{integrity}}
+        else
+          %{#{integrity} #{file}}
+        end
+      end
+
+      def calculate_remote_integrity_hash file, blocking = true
+        cmd = calculate_remote_integrity_hash_command(file)
+        return unless cmd
+        [cmd, blocking_channel_result(cmd, channel: true, use_sh: true, blocking: blocking)]
       end
     end
   end

@@ -34,9 +34,30 @@ module DbSucker
 
           def _r_calculate_raw_hash
             @status = ["calculating integrity hash for raw file...", "yellow"]
-            cmd, (channel, result) = ctn.calculate_remote_integrity_hash(@remote_file_raw, false)
-            second_progress(channel, "calculating integrity hash for raw file (:seconds)...").join
-            @integrity = { raw: result.join.split(" ").first.try(:strip).presence }
+
+            pv_wrap(@ctn, nil) do |pv|
+              pv.enabled do |pvbinary|
+                pv.filesize = @remote_file_raw_filesize
+                pv.label = "hashing raw file"
+                pv.entity = "hashing raw file"
+                pv.status_format = app.opts[:status_format]
+                @status = [pv, "yellow"]
+                pv.abort_if { @should_cancel }
+                pv.cmd = ctn.calculate_remote_integrity_hash_command(@remote_file_raw, pvbinary)
+              end
+
+              pv.fallback do
+                cmd, (channel, pv.result) = ctn.calculate_remote_integrity_hash(@remote_file_raw, false)
+                Thread.main[:app].debug cmd
+                second_progress(channel, "calculating integrity hash for raw file (:seconds)...").join
+              end
+
+              pv.on_success do
+                @integrity = { raw: pv.result.for_group(:stdout).join.split(" ").first.try(:strip).presence }
+              end
+
+              pv.perform!
+            end
           end
 
           def _r_compress_file
@@ -61,7 +82,7 @@ module DbSucker
               end
 
               pv.on_success do
-                @remote_files_to_remove.delete(@remote_file_raw) unless @should_cancel
+                @remote_files_to_remove.delete(@remote_file_raw)
               end
 
               pv.perform!

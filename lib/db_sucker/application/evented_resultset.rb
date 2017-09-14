@@ -45,6 +45,10 @@ module DbSucker
         sync { @closed }
       end
 
+      def empty?
+        sync { @store.empty? }
+      end
+
       def wait
         sync do
           return if closed?
@@ -54,7 +58,7 @@ module DbSucker
       end
 
       def for_group group
-        @store.select{|grp, data| grp == group.try(:to_sym) }
+        @store.map{|grp, data| grp == group.try(:to_sym) ? data : nil }.compact
       end
 
       def each &block
