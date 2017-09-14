@@ -43,7 +43,7 @@ module DbSucker
         end
         @status = ["terminated", "red"]
         sleep @sleep_before_exit
-        app.sandboxed { @window.try(:close) }
+        app.sandboxed { @window.try(:stop) }
         app.sandboxed { @ctn.try(:sftp_end) }
         app.sandboxed do
           app.puts @window.try(:_render_final_results)
@@ -55,7 +55,7 @@ module DbSucker
         return unless app.opts[:window_enabled]
         @window = Window.new(app, self)
         @window.init!
-        @window.start_loop(app.opts[:window_refresh_delay])
+        @window.start
       end
 
       def _check_remote_tmp_directory

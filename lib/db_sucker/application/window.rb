@@ -1,6 +1,7 @@
 module DbSucker
   class Application
     class Window
+      include Core
       include Curses
       COLOR_GRAY = 8
       COL1 = 20
@@ -8,116 +9,33 @@ module DbSucker
       COL3 = 20
       OutputHelper.hook(self)
 
-      attr_reader :app, :sklaventreiber
+      attr_reader :app, :sklaventreiber, :keypad, :tick
       attr_accessor :view
 
       def initialize app, sklaventreiber
         @app = app
+        @keypad = Keypad.new(self)
         @sklaventreiber = sklaventreiber
         @monitor = Monitor.new
-        @l = 0 # line
-        @t = 0 # tick
+        @line = 0
+        @tick = 0
         @view = :status
-      end
-
-      def start_loop refresh_delay
-        @loop = Thread.new do
-          Thread.current[:itype] = :window_draw_loop
-          Thread.current.priority = @app.opts[:tp_window_draw_loop]
-          loop do
-            break if Thread.current[:stop]
-            refresh_screen if app.opts[:window_draw]
-            sleep refresh_delay
-          end
-        end
-        @keyloop = Thread.new do
-          Thread.current[:itype] = :window_keypad_loop
-          Thread.current.priority = @app.opts[:tp_window_keypad_loop]
-          Thread.current[:monitor] = Monitor.new
-          loop do
-            ch = getch
-            Thread.current[:monitor].synchronize do
-              case ch
-              when "P" # kill SSH poll
-                sklaventreiber.poll.try(:kill)
-              when "T" # dump threads (development)
-                dump_file = "#{app.core_tmp_path}/threaddump-#{Time.current.to_i}.log"
-                File.open(dump_file, "wb") do |f|
-                  f.puts "#{Thread.list.length} threads:\n"
-                  Thread.list.each do |thr|
-                    f.puts "#{thr.inspect}"
-                    f.puts "   iType: #{thr == Thread.main ? :main_thread : thr[:itype] || :uncategorized}"
-                    f.puts "   Group: #{thr.group}"
-                    f.puts "  T-Vars: #{thr.thread_variables.inspect}"
-                    thr.thread_variables.each {|k| f.puts "          #{k} => #{thr.thread_variable(k)}" }
-                    f.puts "  F-Vars: #{thr.keys.inspect}"
-                    thr.keys.each {|k| f.puts "          #{k} => #{thr[k]}" }
-                  end
-                end
-                fork { exec("subl -w #{Shellwords.shellescape dump_file} && rm #{Shellwords.shellescape dump_file}") }
-              else
-                addstr "#{ch}\n"
-              end
-            end
-          end
-        end if @app.opts[:window_keypad]
-      end
-
-      def stop_loop
-        return unless @loop
-        @loop[:stop] = true
-        @loop.join
-        if @keyloop
-          @keyloop[:monitor].synchronize do
-            @keyloop.try(:kill)
-          end
-        end
-      end
-
-      def line l = 1
-        setpos(l - 1, 0)
-      end
-
-      [:red, :blue, :yellow, :cyan, :magenta, :gray, :green, :white].each do |c|
-        define_method(c) do |*args, &block|
-          color = self.class.const_get "COLOR_#{c.to_s.upcase}"
-          attron(color_pair(color)|A_NORMAL) do
-            if block
-              block.call
-            else
-              args.each {|a| addstr(a) }
-            end
-          end
-        end
-      end
-
-      def next_line
-        @l += 1
-        setpos(@l, 0)
-      end
-
-      def update
-        clear
-        @l = -1
-        yield if block_given?
-        next_line
-        refresh
       end
 
       def refresh_screen
         Thread.current[:last_render_duration] = rt = Benchmark.realtime do
           @monitor.synchronize do
-            @t += 1
+            @tick += 1
             update { __send__(:"_view_#{@view}") }
           end
         end
         if rt > 0.020
-          Thread.main[:app].warning "window render took: #{"%.6f" % rt}"
+          @app.warning "window render took: #{"%.6f" % rt}"
         else
-          Thread.main[:app].debug "window render took: #{"%.6f" % rt}", 125
+          @app.debug "window render took: #{"%.6f" % rt}", 125
         end
       rescue StandardError => ex
-        Thread.main[:app].notify_exception("DbSucker::Window encountered an render error on tick ##{@t}", ex)
+        @app.notify_exception("DbSucker::Window encountered an render error on tick ##{@tick}", ex)
 
         update do
           next_line
@@ -130,46 +48,6 @@ module DbSucker
           end
         end
         sleep 1
-      end
-
-      def change_view new_view
-        if block_given?
-          view_was = @view
-          begin
-            @view = new_view
-            yield
-          ensure
-            @view = view_was
-          end
-        else
-          @view = new_view
-        end
-      end
-
-      def init!
-        app.debug "Entering curses screen mode"
-        init_screen
-        nl
-        if @app.opts[:window_keypad]
-          noecho
-          cbreak
-          # raw
-          stdscr.keypad = true
-        end
-
-        # colors
-        start_color
-        use_default_colors
-        [COLOR_BLACK, COLOR_RED, COLOR_GREEN, COLOR_YELLOW, COLOR_BLUE, COLOR_MAGENTA, COLOR_CYAN, COLOR_WHITE].each do |cl|
-          init_pair(cl, cl, -1)
-        end
-        init_pair(COLOR_GRAY, 0, -1)
-      end
-
-      def close
-        stop_loop
-        close_screen
-        app.debug "Leaving curses screen mode"
       end
 
       def _view_status
@@ -214,12 +92,13 @@ module DbSucker
         blue "#{done}/#{total || "?"} workers done"
 
         _render_workers
+        @keypad.prompt.render(self, lines-1)
       end
 
       def _render_workers
         if sklaventreiber.workers.any?
           next_line
-          limit = lines - @l - 3 # @l starting at 0, 1 for blank line to come, placeholder
+          limit = lines - @line - 3 - (@keypad.prompt.active? ? 1 : 0) # @l starting at 0, 1 for blank line to come, placeholder
           enum = sklaventreiber.workers.sort_by{|w| [w.priority, w.table] }
           enum.each_with_index do |w, i|
             # limit reached and more than one entry to come?
@@ -250,7 +129,7 @@ module DbSucker
           when :failed then red("✘")
           when :canceled then red("⊘")
           when :running then
-            c = case @t % 4
+            c = case @tick % 4
               when 0 then "◜" # "╭"
               when 1 then "◝" # "╮"
               when 2 then "◞" # "╯"
