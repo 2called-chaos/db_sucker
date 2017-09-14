@@ -39,6 +39,7 @@ module DbSucker
                     when :get
                       @state = :downloading
                       @offset = args[1] + args[2].length
+                      GC.start if @offset % GC_FORCE_RATE == 0
                     when :close
                       @state = :finishing
                     when :finish

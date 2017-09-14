@@ -38,6 +38,7 @@ module DbSucker
 
                     @offset += [opts[:read_size], @filesize - @offset].min
                     @out_file.syswrite(buf)
+                    GC.start if @offset % GC_FORCE_RATE == 0
                   end
                 ensure
                   @state = :finishing

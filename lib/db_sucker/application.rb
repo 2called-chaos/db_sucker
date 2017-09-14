@@ -5,6 +5,7 @@ module DbSucker
     include Colorize
     include OutputHelper
     include Dispatch
+    GC_FORCE_RATE = 25*1024*1024
 
     # main dispatch routine for application
     def self.dispatch *a

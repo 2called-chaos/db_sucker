@@ -35,6 +35,7 @@ module DbSucker
 
                     @offset += buf.bytesize
                     @out_file.syswrite(buf)
+                    GC.start if @offset % GC_FORCE_RATE == 0
                   end
                 rescue EOFError
                 ensure
