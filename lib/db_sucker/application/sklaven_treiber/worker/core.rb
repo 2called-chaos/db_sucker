@@ -21,16 +21,17 @@ module DbSucker
 
           def cancel! reason = nil, now = false
             @should_cancel = reason || true
-            sync { _cancelpoint(reason, true) if pending? || now }
+            sync { _cancelpoint(reason) if pending? || now }
           end
 
-          def _cancelpoint reason = nil, abort = false
+          def _cancelpoint reason = nil
             if @should_cancel
               reason ||= @should_cancel if @should_cancel.is_a?(String)
+              reason ||= @status[0]
               @should_cancel = false
               @state = :canceled
               @status = ["CANCELED#{" (was #{reason.to_s.gsub("[CLOSING] ", "")})" if reason}", "red"]
-              throw :abort_execution, true if abort
+              throw :abort_execution, true
               true
             end
           end
@@ -57,10 +58,19 @@ module DbSucker
             catch :abort_execution do
               perform.each_with_index do |m, i|
                 current_perform = m
-                _cancelpoint @status[0], true
+                _cancelpoint
                 @step = i + 1
-                @timings[m] = Benchmark.realtime { send(:"_#{m}") }
-                _cancelpoint @status[0], true
+                r = catch(:abort_execution) {
+                  begin
+                    r0 = Time.current
+                    send(:"_#{m}")
+                  ensure
+                    @timings[m] = Time.current - r0
+                  end
+                  nil
+                }
+                throw :abort_execution if r
+                _cancelpoint
               end
               @status = ["DONE (#{runtime})", "green"]
             end

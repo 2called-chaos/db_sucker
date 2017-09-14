@@ -10,12 +10,13 @@ module DbSucker
             @remote_files_to_remove << @remote_file_raw_tmp
             @remote_file_raw = @remote_file_raw_tmp[0..-5]
             second_progress(channel, "dumping table to remote file (:seconds)...").join
+            _cancelpoint
 
             if result.any?
               r = result.join
               if m = r.match(/(Unknown column '(.+)') in .+ \(([0-9]+)\)/i)
                 @status = ["[DUMP] Failed: #{m[1]} (#{m[3]})", :red]
-                throw :abort_execution
+                throw :abort_execution, true
               end
             end
 
@@ -26,7 +27,6 @@ module DbSucker
               # save size for gzip progress
               @remote_file_raw_filesize = sftp.lstat!(@remote_file_raw).size
             end
-
 
             @remote_files_to_remove.delete(@remote_file_raw_tmp)
             @remote_files_to_remove << @remote_file_raw
@@ -132,7 +132,7 @@ module DbSucker
             return unless @integrity[:compressed]
             if !File.exist?(@local_file_compressed)
               @status = ["[INTEGRITY] compressed file does not exist?! Fatal error!", :red]
-              throw :abort_execution
+              throw :abort_execution, true
             end
             @status = ["verifying data integrity for compressed file...", "yellow"]
             cmd, (channel, result) = var.calculate_local_integrity_hash(@local_file_compressed, false)
@@ -141,7 +141,7 @@ module DbSucker
 
             if !@should_cancel && @integrity[:compressed] != @integrity[:compressed_local]
               @status = ["[INTEGRITY] downloaded compressed file corrupted! (remote: #{@integrity[:compressed]}, local: #{@integrity[:compressed_local]})", :red]
-              throw :abort_execution
+              throw :abort_execution, true
             end
           end
 
@@ -187,7 +187,7 @@ module DbSucker
             return unless @integrity[:raw]
             if !File.exist?(@local_file_raw)
               @status = ["[INTEGRITY] extracted raw file does not exist?! Fatal error!", :red]
-              throw :abort_execution
+              throw :abort_execution, true
             end
             @status = ["verifying data integrity for raw file...", "yellow"]
             cmd, (channel, result) = var.calculate_local_integrity_hash(@local_file_raw, false)
@@ -196,7 +196,7 @@ module DbSucker
 
             if !@should_cancel && @integrity[:raw] != @integrity[:raw_local]
               @status = ["[INTEGRITY] extracted raw file corrupted! (remote: #{@integrity[:raw]}, local: #{@integrity[:raw_local]})", :red]
-              throw :abort_execution
+              throw :abort_execution, true
             end
           end
 
