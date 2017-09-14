@@ -22,6 +22,7 @@ module DbSucker
 
       def start_loop refresh_delay
         @loop = Thread.new do
+          Thread.current[:itype] = :window_draw_loop
           loop do
             break if Thread.current[:stop]
             refresh_screen if app.opts[:window_draw]
@@ -67,7 +68,7 @@ module DbSucker
       end
 
       def refresh_screen
-        rt = Benchmark.realtime do
+        Thread.current[:last_render_duration] = rt = Benchmark.realtime do
           @monitor.synchronize do
             @t += 1
             update { __send__(:"_view_#{@view}") }

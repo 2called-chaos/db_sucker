@@ -35,6 +35,8 @@ module DbSucker
             opts = opts.reverse_merge(blocking: true, thread: false, close_stdin: false, close_stdouterr: false)
             result = []
             thr = channelfy_thread Thread.new {
+              Thread.current[:itype] = :sklaventreiber_worker_local_execute
+              Thread.current[:executing] = cmd
               Open3.popen2e(cmd, pgroup: true) do |_ipc_stdin, _ipc_stdouterr, _ipc_thread|
                 Thread.current[:ipc_thread] = _ipc_thread
                 Thread.current[:ipc_stdin] = _ipc_stdin
