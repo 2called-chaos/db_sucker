@@ -11,12 +11,8 @@ module DbSucker
             succeeded? || failed? || canceled?
           end
 
-          def terminated?
-            @ended
-          end
-
-          def alive?
-            !terminated?
+          def sshing?
+            @sshing
           end
 
           def failed?

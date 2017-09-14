@@ -49,6 +49,7 @@ module DbSucker
 
           def run
             @state = :running
+            @sshing = true
             @started = Time.current
             @download_state = { state: :idle, offset: 0 }
             @remote_files_to_remove = []
@@ -94,6 +95,7 @@ module DbSucker
 
             @state = :done if !canceled? && !failed?
             @ended = Time.current
+            @sshing = false
 
             # debug timings
             debug "[Timings(#{table})] all: #{human_seconds(@timings.values.sum, 3)}, #{@timings.map{|a,t| "#{a}: #{human_seconds(t, 3)}" } * ", "}", 50

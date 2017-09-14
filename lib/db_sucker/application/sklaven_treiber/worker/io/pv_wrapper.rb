@@ -63,8 +63,13 @@ module DbSucker
                 Thread.current[:itype] = :sklaventreiber_worker_io_pv_killer
                 loop do
                   if @worker.should_cancel && !Thread.current[:canceled]
-                    channel.send_data("\C-c") rescue false if channel.is_a?(Net::SSH::Connection::Channel) && channel[:pty]
-                    @ctn.kill_remote_process(channel[:pid]) if channel.is_a?(Net::SSH::Connection::Channel) && channel[:pid]
+                    if channel.is_a?(Net::SSH::Connection::Channel)
+                      if channel[:pty]
+                        channel.send_data("\C-c") rescue false
+                      elsif channel[:pid]
+                        @ctn.kill_remote_process(channel[:pid])
+                      end
+                    end
                     channel.close rescue false
                     Thread.current[:canceled] = true
                   end
