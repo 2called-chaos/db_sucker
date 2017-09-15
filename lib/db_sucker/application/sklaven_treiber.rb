@@ -38,6 +38,10 @@ module DbSucker
         _run_consumers
       ensure
         app.sandboxed do
+          @status = ["terminating (canceling workers)", "red"]
+          @workers.each(&:cancel!)
+        end
+        app.sandboxed do
           @status = ["terminating (SSH poll)", "red"]
           @poll.try(:join)
         end

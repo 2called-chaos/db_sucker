@@ -20,6 +20,7 @@ module DbSucker
           end
 
           def cancel! reason = nil, now = false
+            return if done?
             @should_cancel = reason || true
             sync { _cancelpoint(reason) if pending? || now }
           end
