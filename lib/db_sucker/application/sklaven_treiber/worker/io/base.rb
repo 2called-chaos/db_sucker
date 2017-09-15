@@ -78,6 +78,32 @@ module DbSucker
               FileUtils.mkdir_p(File.dirname(@local))
             end
 
+            def execute opts = {}, &block
+              opts = opts.reverse_merge(tries: 1, sleep_error: 0)
+              try = 1
+              begin
+                reset_state
+                throughput.measure(&block)
+                if !@closing && !@worker.should_cancel
+                  @state = :done
+                  @on_success.call(self)
+                end
+              rescue StandardError => ex
+                @operror = "##{try} #{ex.class}: #{ex.message}"
+                @on_error.call(self, ex, @operror)
+                try += 1
+                if try > opts[:tries]
+                  raise ex
+                else
+                  sleep opts[:sleep_error]
+                  retry
+                end
+              ensure
+                @on_complete.call(self)
+                @throughput.unregister
+              end
+            end
+
             def to_s
               return @operror if @operror
 

@@ -24,37 +24,16 @@ module DbSucker
             def perform! opts = {}
               if @ctn.pv_utility
                 @enabled.call(@ctn.pv_utility)
-                if @cmd.present?
-                  begin
-                    _perform_with_wrapper
-                    @state = :done
-                    @on_success.call(self) if !@closing && !@worker.should_cancel
-                  rescue StandardError => ex
-                    @operror = "#{ex.class}: #{ex.message}"
-                    @on_error.call(self, ex, @operror)
-                    sleep 3
-                    raise
-                  ensure
-                    @on_complete.call(self)
-                  end
-                else
-                  raise NoCommandError, "no command was provided, set `pv.cmd = mycmd' in the enabled callback"
+                raise(NoCommandError, "no command was provided, set `pv.cmd = mycmd' in the enabled callback") if @cmd.blank?
+                execute(opts.slice(:tries).merge(sleep_error: 3)) do
+                  _perform_with_wrapper
                 end
               else
-                begin
-                  @fallback.call
-                  @on_success.call(self) if !@closing && !@worker.should_cancel
-                rescue StandardError => ex
-                  @on_error.call(self, ex, @operror)
-                  raise
-                ensure
-                  @on_complete.call(self)
-                end
+                execute(opts.slice(:tries), &@fallback)
               end
             end
 
             def _perform_with_wrapper
-              reset_state
               @state = :working
               channel, @result = @ctn.nonblocking_channel_result(cmd, channel: true, use_sh: true)
 

@@ -20,10 +20,7 @@ module DbSucker
             def download! opts = {}
               opts = opts.reverse_merge(tries: 3, read_size: @read_size, force_new_connection: true)
               prepare_local_destination
-
-              try = 1
-              begin
-                reset_state
+              execute(opts.slice(:tries).merge(sleep_error: 3)) do
                 @ctn.sftp_start(opts[:force_new_connection]) do |sftp|
                   @filesize = sftp.lstat!(@remote).size
                   sftp.download!(@remote, @local, read_size: opts[:read_size], requests: 1) do |event, downloader, *args|
@@ -49,19 +46,6 @@ module DbSucker
                     end
                   end
                 end
-                @on_success.call(self) if !@closing && !@worker.should_cancel
-              rescue Net::SSH::Disconnect => ex
-                @operror = "##{try} #{ex.class}: #{ex.message}"
-                @on_error.call(self, ex, @operror)
-                try += 1
-                sleep 3
-                if try > opts[:tries]
-                  raise ex
-                else
-                  retry
-                end
-              ensure
-                @on_complete.call(self)
               end
             end
           end
