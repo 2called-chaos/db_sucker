@@ -74,15 +74,15 @@ module DbSucker
         window_keypad: true, # allow keyboard controls
         consumers: 10, # amount of workers to run at the same time
 
-        # thread priorities
-        tp_sklaventreiber_ssh_poll: 100,
-        tp_sklaventreiber_worker_ctrl: 25,
-        tp_sklaventreiber_worker: 25,
-        tp_window_draw_loop: 5,
-        tp_window_keypad_loop: 50,
-        tp_sklaventreiber_worker_local_execute: 75,
-        tp_sklaventreiber_worker_second_progress: 10,
-        tp_sklaventreiber_worker_io_pv_killer: 25,
+        # thread priorities (-3..+3)
+        tp_window_draw_loop: -3,
+        tp_window_keypad_loop: +2,
+        tp_sklaventreiber_ssh_poll: +3,
+        tp_sklaventreiber_worker: -1,
+        tp_sklaventreiber_worker_ctrl: -1,
+        tp_sklaventreiber_worker_local_execute: +2,
+        tp_sklaventreiber_worker_second_progress: -2,
+        tp_sklaventreiber_worker_io_pv_killer: -2,
 
         # amount of workers that can use a slot, false to disable
         #slot_deferred: 1,
