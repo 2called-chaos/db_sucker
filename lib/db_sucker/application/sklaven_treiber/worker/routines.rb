@@ -6,20 +6,42 @@ module DbSucker
           def _r_dump_file
             @status = ["dumping table to remote file...", "yellow"]
 
-            @remote_file_raw_tmp, (channel, result) = var.dump_to_remote(self, false)
-            @remote_files_to_remove << @remote_file_raw_tmp
-            @remote_file_raw = @remote_file_raw_tmp[0..-5]
-            second_progress(channel, "dumping table to remote file (:seconds)...").join
+            pv_wrap(@ctn, nil) do |pv|
+              pv.enabled do |pvbinary|
+                pv.filesize = -1
+                pv.label = "dumping table"
+                pv.entity = "table dump"
+                pv.status_format = app.opts[:status_format]
+                pv.mode = :nofs
+                @status = [pv, "yellow"]
+                pv.abort_if { @should_cancel }
+
+                @remote_file_raw_tmp, pv.cmd = var.dump_to_remote_command(self, pvbinary)
+              end
+
+              pv.fallback do
+                @remote_file_raw_tmp, (channel, result) = var.dump_to_remote(self, false)
+                second_progress(channel, "dumping table to remote file (:seconds)...").join
+              end
+
+              pv.on_complete do
+                @remote_files_to_remove << @remote_file_raw_tmp
+              end
+
+              pv.perform!
+            end
             _cancelpoint
 
-            if result.any?
-              r = result.join
-              if m = r.match(/(Unknown column '(.+)') in .+ \(([0-9]+)\)/i)
-                @status = ["[DUMP] Failed: #{m[1]} (#{m[3]})", :red]
-                throw :abort_execution, true
-              end
-            end
+            # check if response has any sort of errors and abort
+            # if result.any?
+            #   r = result.join
+            #   if m = r.match(/(Unknown column '(.+)') in .+ \(([0-9]+)\)/i)
+            #     @status = ["[DUMP] Failed: #{m[1]} (#{m[3]})", :red]
+            #     throw :abort_execution, true
+            #   end
+            # end
 
+            @remote_file_raw = @remote_file_raw_tmp[0..-5]
             ctn.sftp_start do |sftp|
               # rename tmp file
               sftp.rename!(@remote_file_raw_tmp, @remote_file_raw)

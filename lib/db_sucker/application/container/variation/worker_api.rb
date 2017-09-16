@@ -29,10 +29,20 @@ module DbSucker
             [keep, all]
           end
 
-          def dump_to_remote worker, blocking = true
+          def dump_to_remote_command worker, pv_binary = false
+            tmpfile = worker.tmp_filename(true)
             cmd = dump_command_for(worker.table)
-            cmd << " > #{worker.tmp_filename(true)}"
-            [worker.tmp_filename(true), cfg.blocking_channel_result(cmd, channel: true, use_sh: true, blocking: blocking)]
+            if pv_binary.presence
+              cmd << %{ | #{pv_binary} -n -b > #{tmpfile}}
+            else
+              cmd << %{ > #{tmpfile}}
+            end
+            [tmpfile, cmd]
+          end
+
+          def dump_to_remote worker, blocking = true
+            tfile, cmd = dump_to_remote_command(worker)
+            [tfile, cfg.blocking_channel_result(cmd, channel: true, use_sh: true, blocking: blocking)]
           end
 
           def compress_file_command file, pv_binary = false

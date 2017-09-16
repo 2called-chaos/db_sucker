@@ -8,7 +8,7 @@ module DbSucker
             DataIntegrityError = Class.new(::RuntimeError)
             STATUS_FORMATTERS = [:none, :minimal, :full]
             attr_reader :status_format, :state, :operror, :offset, :closing, :local, :remote, :ctn
-            attr_accessor :read_size, :label, :entity, :filesize, :throughput
+            attr_accessor :read_size, :label, :entity, :filesize, :throughput, :mode
             OutputHelper.hook(self)
 
             def initialize worker, ctn, fd
@@ -24,6 +24,7 @@ module DbSucker
               @label ||= "working"
               @entity ||= "task"
               @status_format = :off
+              @mode = :fs
               @throughput = worker.sklaventreiber.throughput.register(self)
               @read_size = 128 * 1024 # 128kb
               @filesize = 0
@@ -127,19 +128,27 @@ module DbSucker
                   r << "#{@label}:"
                   r << " verifying..."
                 when :done
-                  r << "#{@entity || @label} #{@offset == @filesize ? "complete" : "INCOMPLETE"}: #{tp.f_done_percentage} – #{tp.f_byte_progress}"
+                  if @mode == :nofs
+                    r << "#{@entity || @label} complete(?): #{tp.f_offset}"
+                  else
+                    r << "#{@entity || @label} #{@offset == @filesize ? "complete" : "INCOMPLETE"}: #{tp.f_done_percentage} – #{tp.f_byte_progress}"
+                  end
                 when :downloading, :copying, :decompressing, :working
                   r << "#{@label}:"
-                  r << tp.f_done_percentage.rjust(7, " ")
-                  if @status_format == :minimal
-                    r << "[#{tp.f_eta}]"
-                  elsif @status_format == :full
-                    r << "[#{tp.f_eta} – #{tp.f_bps.rjust(9, " ")}/s]"
-                  end
+                  if @mode == :nofs
+                    r << "[#{tp.f_offset} – #{tp.f_bps}/s]"
+                  else
+                    r << tp.f_done_percentage.rjust(7, " ")
+                    if @status_format == :minimal
+                      r << "[#{tp.f_eta}]"
+                    elsif @status_format == :full
+                      r << "[#{tp.f_eta} – #{tp.f_bps.rjust(9, " ")}/s]"
+                    end
 
-                  if @status_format == :full
-                    f_has, f_tot = tp.f_offset, tp.f_filesize
-                    r << "[#{f_has.rjust(f_tot.length, "0")}/#{f_tot}]"
+                    if @status_format == :full
+                      f_has, f_tot = tp.f_offset, tp.f_filesize
+                      r << "[#{f_has.rjust(f_tot.length, "0")}/#{f_tot}]"
+                    end
                   end
                 end
               end * " "
@@ -174,33 +183,49 @@ module DbSucker
                   yellow "#{_this.label}: "
                   gray " verifying..."
                 when :done
-                  if _this.offset == _this.filesize
-                    green "#{_this.entity || _this.label} complete: #{tp.f_done_percentage}"
+                  if _this.mode == :nofs
+                    green "#{_this.entity || _this.label} complete(?): "
                     yellow " – "
                     cyan "#{human_bytes _this.offset}"
                   else
-                    red "#{_this.entity || _this.label} INCOMPLETE: #{tp.f_done_percentage}"
-                    yellow " – "
-                    cyan "#{tp.f_byte_progress}"
+                    if _this.offset == _this.filesize
+                      green "#{_this.entity || _this.label} complete: #{tp.f_done_percentage}"
+                      yellow " – "
+                      cyan "#{human_bytes _this.offset}"
+                    else
+                      red "#{_this.entity || _this.label} INCOMPLETE: #{tp.f_done_percentage}"
+                      yellow " – "
+                      cyan "#{tp.f_byte_progress}"
+                    end
                   end
                 when :downloading, :copying, :decompressing, :working
                   yellow "#{_this.label}: "
-                  diffp = tp.done_percentage
-                  color = diffp > 90 ? :green : diffp > 75 ? :blue : diffp > 50 ? :cyan : diffp > 25 ? :yellow : :red
-                  send(color, tp.f_done_percentage.rjust(7, " ") << " ")
+                  if _this.mode == :nofs
+                    blue "#{tp.f_offset}"
+                    if _this.status_format == :minimal
+                      gray " [#{tp.f_runtime}]"
+                    elsif _this.status_format == :full
+                      gray " [#{tp.f_bps}/s – #{tp.f_runtime}]"
+                    end
+                    #progress_bar(-1)
+                  else
+                    diffp = tp.done_percentage
+                    color = diffp > 90 ? :green : diffp > 75 ? :blue : diffp > 50 ? :cyan : diffp > 25 ? :yellow : :red
+                    send(color, tp.f_done_percentage.rjust(7, " ") << " ")
 
-                  if _this.status_format == :minimal
-                    yellow "[#{tp.f_eta}]"
-                  elsif _this.status_format == :full
-                    yellow "[#{tp.f_eta} – #{tp.f_bps.rjust(9, " ")}/s]"
+                    if _this.status_format == :minimal
+                      yellow "[#{tp.f_eta}]"
+                    elsif _this.status_format == :full
+                      yellow "[#{tp.f_eta} – #{tp.f_bps.rjust(9, " ")}/s]"
+                    end
+
+                    if _this.status_format == :full
+                      f_has, f_tot = tp.f_offset, tp.f_filesize
+                      gray " [#{f_has.rjust(f_tot.length, "0")}/#{f_tot}]"
+                    end
+
+                    progress_bar(diffp, prog_done_color: color, prog_current_color: color)
                   end
-
-                  if _this.status_format == :full
-                    f_has, f_tot = tp.f_offset, tp.f_filesize
-                    gray " [#{f_has.rjust(f_tot.length, "0")}/#{f_tot}]"
-                  end
-
-                  progress_bar(diffp, prog_done_color: color, prog_current_color: color)
                 end
               end
             end
