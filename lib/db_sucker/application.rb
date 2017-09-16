@@ -85,6 +85,10 @@ module DbSucker
         tp_sklaventreiber_worker_second_progress: -2,
         tp_sklaventreiber_worker_io_pv_killer: -2,
 
+        # used to open core dumps (should be a blocking call, e.g. `subl -w' or `mate -w')
+        # MUST be windowed! vim, nano, etc. will not work!
+        core_dump_editor: "subl -w",
+
         # amount of workers that can use a slot, false to disable
         #slot_deferred: 1,
         # slot_sftp: false,

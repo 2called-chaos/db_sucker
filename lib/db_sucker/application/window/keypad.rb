@@ -91,7 +91,7 @@ module DbSucker
             FileUtils.mkdir_p(File.dirname(df))
             File.open(df, "wb", &block) if block
             if block && open && sdf = Shellwords.shellescape(df)
-              fork { exec("subl -w #{sdf} ; rm #{sdf}") }
+              fork { exec("#{app.opts[:core_dump_editor]} #{sdf} ; rm #{sdf}") }
             end
           end
         end
