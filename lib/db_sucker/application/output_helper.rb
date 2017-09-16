@@ -100,7 +100,7 @@ module DbSucker
 
         dbs.each_with_index do |db, i|
           if db.is_a?(Array)
-            d = c db[0], :magenta
+            d = c(db[0], :magenta) << c(" (#{db[1].length})", :black)
             if i == dbs.count - 1
               log("#{db[1].any? ? "├──" : "└──"} #{d}")
             else
