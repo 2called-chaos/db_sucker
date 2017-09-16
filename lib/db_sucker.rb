@@ -61,5 +61,8 @@ require "db_sucker/adapters/mysql2"
 
 # patches
 require "db_sucker/patches/net-sftp"
-require "db_sucker/patches/developer"
-require "db_sucker/patches/thread-count"
+
+if ENV["DBS_DEVELOPER"] && ENV["DBS_DEVELOPER"] != "false"
+  require "db_sucker/patches/developer"
+  require "db_sucker/patches/thread-count"
+end

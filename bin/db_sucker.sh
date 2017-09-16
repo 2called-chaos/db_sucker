@@ -11,4 +11,4 @@ done
 PROJECT_ROOT="$( cd -P "$( dirname "$SOURCE" )"/.. && pwd )"
 
 # Actually run script
-cd $PROJECT_ROOT && bundle exec ruby bin/db_sucker "$@"
+cd $PROJECT_ROOT && DBS_DEVELOPER=true bundle exec ruby bin/db_sucker "$@"
