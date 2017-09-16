@@ -187,7 +187,7 @@ module DbSucker
       end
 
       def human_seconds2 secs
-        return "?:¿?:¿?" if secs.infinite?
+        return "?:¿?:¿?" if secs.try(:infinite?)
         Time.at(secs).utc.strftime("%k:%M:%S").strip
       end
     end

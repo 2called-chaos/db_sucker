@@ -10,6 +10,7 @@ module DbSucker
             def init
               @label = "downloading"
               @entity = "download"
+              @throughput.categories << :inet << :inet_down
             end
 
             def reset_state

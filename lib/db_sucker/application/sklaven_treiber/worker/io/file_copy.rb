@@ -10,6 +10,7 @@ module DbSucker
               @label = "copying"
               @entity = "copy"
               @use_tmp = true
+              @throughput.categories << :io << :io_file_copy
             end
 
             def copy! opts = {}

@@ -13,6 +13,7 @@ module DbSucker
               @use_tmp = true
               @preserve_original = false
               @local ||= "#{File.dirname(@remote)}/#{File.basename(@remote, ".gz")}"
+              @throughput.categories << :io << :io_gunzip
             end
 
             def gunzip! opts = {}

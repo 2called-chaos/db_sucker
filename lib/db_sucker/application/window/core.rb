@@ -85,6 +85,35 @@ module DbSucker
           end
         end
 
+        def progress_bar perc, opts = {}
+          opts = opts.reverse_merge({
+            width: cols - stdscr.curx - 3,
+            prog_open: "[",
+            prog_open_color: "yellow",
+            prog_done: "=",
+            prog_done_color: "green",
+            prog_current: ">",
+            prog_current_color: "yellow",
+            prog_remain: ".",
+            prog_remain_color: "gray",
+            prog_close: "]",
+            prog_close_color: "yellow",
+          })
+          pdone = (opts[:width].to_d * (perc.to_d / 100.to_d)).ceil.to_i
+          prem  = opts[:width] - pdone
+          pcur  = 0
+          if perc < 100
+            pdone.zero? ? (prem -= 1) : (pdone -= 1)
+            pcur  += 1
+          end
+
+          send(opts[:prog_open_color], " #{opts[:prog_open]}")
+          send(opts[:prog_done_color], "".ljust(pdone, opts[:prog_done])) unless pdone.zero?
+          send(opts[:prog_current_color], "".ljust(pcur, opts[:prog_current])) unless pcur.zero?
+          send(opts[:prog_remain_color], "".ljust(prem, opts[:prog_remain])) unless prem.zero?
+          send(opts[:prog_close_color], "#{opts[:prog_close]}")
+        end
+
         # colors
         [:red, :blue, :yellow, :cyan, :magenta, :gray, :green, :white].each do |c|
           define_method(c) do |*args, &block|

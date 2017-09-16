@@ -78,6 +78,7 @@ module DbSucker
         tp_window_draw_loop: -3,
         tp_window_keypad_loop: +2,
         tp_sklaventreiber_ssh_poll: +3,
+        tp_sklaventreiber_throughput: +2,
         tp_sklaventreiber_worker: -1,
         tp_sklaventreiber_worker_ctrl: -1,
         tp_sklaventreiber_worker_local_execute: +2,

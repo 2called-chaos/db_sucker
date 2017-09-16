@@ -1,7 +1,7 @@
 module DbSucker
   class Application
     class SklavenTreiber
-      attr_reader :app, :trxid, :window, :data, :status, :monitor, :workers, :poll
+      attr_reader :app, :trxid, :window, :data, :status, :monitor, :workers, :poll, :throughput
 
       def initialize app, trxid
         @app = app
@@ -11,6 +11,7 @@ module DbSucker
         @workers = []
         @threads = []
         @sleep_before_exit = 0
+        @throughput = Worker::IO::Throughput.new(self)
 
         @data = {
           database: nil,
@@ -33,6 +34,7 @@ module DbSucker
         _select_tables
         _initialize_workers
         _start_ssh_poll
+        @throughput.start_loop
 
         @sleep_before_exit = 3
         _run_consumers
@@ -49,6 +51,7 @@ module DbSucker
         sleep @sleep_before_exit
         app.sandboxed { @window.try(:stop) }
         app.sandboxed { @ctn.try(:sftp_end) }
+        app.sandboxed { @throughput.try(:stop_loop) }
         app.sandboxed do
           app.puts @window.try(:_render_final_results)
         end

@@ -6,8 +6,14 @@ module DbSucker
     class Developer < Application::Tie
       def self.hook!(app)
         app.hook :core_shutdown do
+          if app.sklaventreiber
+            iostats = app.sklaventreiber.throughput.stats.sort_by{|k,v|k}.map do |k, v|
+              %{:#{k}=>#{v}(#{app.human_bytes(v)})}
+            end
+            app.debug "IO-stats: {#{iostats * ", "}}"
+            app.sklaventreiber.window.keypad.dump_core if Thread.list.length > 1
+          end
           app.debug "RSS: #{app.human_bytes(`ps h -p #{Process.pid} -o rss`.strip.split("\n").last.to_i * 1024)}"
-          app.sklaventreiber.window.keypad.dump_core if Thread.list.length > 1
         end
 
         app.hook :worker_routine_before do |_, worker, routine|
