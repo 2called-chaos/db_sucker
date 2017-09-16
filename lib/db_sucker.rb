@@ -19,7 +19,6 @@ require "active_support/core_ext"
 require "active_support/time_with_zone"
 require "net/ssh"
 require "net/sftp"
-begin ; require "pry" ; rescue LoadError ; end
 
 # application
 require "db_sucker/version"
