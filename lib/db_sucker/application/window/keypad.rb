@@ -42,7 +42,9 @@ module DbSucker
         end
 
         def stop_loop
-          sync { @keyloop.try(:kill) }
+          return unless @keyloop
+          sync { @keyloop.kill }
+          @keyloop.join
         end
 
         def prompt! *a, &b

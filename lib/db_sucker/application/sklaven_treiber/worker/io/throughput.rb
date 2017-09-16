@@ -143,7 +143,7 @@ module DbSucker
 
               def reset_stats
                 sync do
-                  @stats = { eta: 0, eta2: 0, bps: 0, bps_avg: 0 }
+                  @stats = { eta: -1, eta2: -1, bps: 0, bps_avg: 0 }
                 end
               end
 
