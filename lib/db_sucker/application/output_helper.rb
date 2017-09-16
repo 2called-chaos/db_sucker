@@ -2,7 +2,7 @@ module DbSucker
   class Application
     module OutputHelper
       def self.hook ctx
-        [:puts, :print, :warn, :debug, :log, :warning, :error, :abort, :uncolorize, :db_table_listing, :print_db_table_list, :uncolorize, :render_table, :f_percentage, :human_bytes, :human_number, :human_percentage, :human_seconds, :human_seconds2, :rll, :c].each do |meth|
+        [:puts, :print, :warn, :debug, :log, :warning, :error, :abort, :uncolorize, :db_table_listing, :print_db_table_list, :uncolorize, :render_table, :f_percentage, :human_bytes, :human_number, :human_percentage, :human_seconds, :human_seconds2, :rll, :c, :strbool].each do |meth|
           ctx.__send__(:define_method, meth) do |*a|
             Thread.main[:app].__send__(meth, *a)
           end
@@ -121,6 +121,12 @@ module DbSucker
         end
       end
 
+      def strbool v
+        v = true if ["true", "t", "1", "y", "yes", "on"].include?(v)
+        v = false if ["false", "f", "0", "n", "no", "off"].include?(v)
+        v
+      end
+
       def f_percentage have, total, nn = 2
         human_percentage(total == 0 ? 100 : have == 0 ? 0 : (have.to_d / total.to_d * 100.to_d), nn)
       end
@@ -182,13 +188,13 @@ module DbSucker
             secs = secs % t_minute
           end
 
-          r << "#{"%.#{sprec}f" % secs}s" unless r.include?("d")
+          r << "#{"%.#{sprec}f" % secs.round(sprec)}s" unless r.include?("d")
         end.strip
       end
 
       def human_seconds2 secs
         return "?:¿?:¿?" if secs.try(:infinite?)
-        Time.at(secs).utc.strftime("%k:%M:%S").strip
+        Time.at(secs.round).utc.strftime("%k:%M:%S").strip
       end
     end
   end
