@@ -84,7 +84,7 @@ module DbSucker
         end
 
         def database_list include_tables = false
-          dbs = blocking_channel_result(%{#{client_call} -N -e 'SHOW DATABASES;'}).join("").split("\n")
+          dbs = blocking_channel_result(%{#{client_call} -N -e 'SHOW DATABASES;'}).for_group(:stdout).join("").split("\n")
 
           if include_tables
             dbs.map do |db|
@@ -96,11 +96,11 @@ module DbSucker
         end
 
         def table_list database
-          blocking_channel_result(%{#{client_call} -N -e 'SHOW FULL TABLES IN #{database};'}).join("").split("\n").map{|r| r.split("\t") }
+          blocking_channel_result(%{#{client_call} -N -e 'SHOW FULL TABLES IN #{database};'}).for_group(:stdout).join("").split("\n").map{|r| r.split("\t") }
         end
 
         def hostname
-          blocking_channel_result(%{#{client_call} -N -e 'select @@hostname;'}).join("").strip
+          blocking_channel_result(%{#{client_call} -N -e 'select @@hostname;'}).for_group(:stdout).join("").strip
         end
       end
     end
