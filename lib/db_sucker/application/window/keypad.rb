@@ -62,6 +62,8 @@ module DbSucker
               when ":" then main_prompt
               when "T" then dump_core # (development)
               when "P" then kill_ssh_poll
+              when "q" then quit_dialog
+              when "Q" then $core_runtime_exiting = 1
               end
             end
           end
@@ -82,6 +84,18 @@ module DbSucker
           end
         end
 
+        def quit_dialog
+          q = "Do you want to abort all operations and quit?"
+          p = Proc.new do
+            blue q
+            gray " [y/q/t/1 n/f/0] "
+          end
+          prompt!(q, prompt: p, return_on_buffer: true, return_on_enter: false, has_cursor: false) do |response|
+            if response == "q" || @window.strbool(response) == true
+              $core_runtime_exiting = 1
+            end
+          end
+        end
         def main_prompt
           prompt!(":") do |evil|
             break if evil.blank?
