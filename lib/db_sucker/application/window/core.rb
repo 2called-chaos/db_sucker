@@ -72,6 +72,7 @@ module DbSucker
             noecho
             cbreak
             stdscr.keypad = true
+            curs_set 0
           end
 
           # colors
