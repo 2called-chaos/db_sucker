@@ -59,6 +59,7 @@ module DbSucker
             else
               case ch
               when "^" then eval_prompt # (development)
+              when ":" then main_prompt
               when "T" then dump_core # (development)
               when "P" then kill_ssh_poll
               end
@@ -78,6 +79,21 @@ module DbSucker
                 ex.backtrace.each {|l| f.puts("  #{l}") }
               end
             end
+          end
+        end
+
+        def main_prompt
+          prompt!(":") do |evil|
+            break if evil.blank?
+            # app.dump_file "eval-result", true do |f|
+            #   begin
+            #     f.puts("#{evil}\n\n")
+            #     f.puts(app.sync{ app.instance_eval(evil) })
+            #   rescue StandardError => ex
+            #     f.puts("#{ex.class}: #{ex.message}")
+            #     ex.backtrace.each {|l| f.puts("  #{l}") }
+            #   end
+            # end
           end
         end
 

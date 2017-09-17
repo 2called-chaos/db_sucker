@@ -72,7 +72,7 @@ module DbSucker
             noecho
             cbreak
             stdscr.keypad = true
-            curs_set 0
+            set_cursor 0
           end
 
           # colors
@@ -85,11 +85,24 @@ module DbSucker
           init_pair(Window::COLOR_GRAY, 0, -1)
         end
 
+        def set_cursor visibility
+          curs_set(visibility)
+        end
+
+        def force_cursor line, col = 0
+          if line.nil?
+            @force_cursor = nil
+          else
+            @force_cursor = [line, col]
+          end
+        end
+
         def update
           clear
           @line = -1
           yield if block_given?
           next_line
+          setpos(*@force_cursor) if @force_cursor
           refresh
         end
 
