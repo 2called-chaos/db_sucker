@@ -182,16 +182,12 @@ module DbSucker
         if ctn && (var || (@opts[:suck_only].any? || @opts[:suck_except].any?))
           var ||= ctn.variation("default")
           begin
-            stdout_was = @opts[:stdout]
-            @opts[:stdout] = SklavenTreiber::LogSpool.new
             trap_signals
             @sklaventreiber = SklavenTreiber.new(self, uniqid)
-            @sklaventreiber.whip_it!(ctn, var)
+            @sklaventreiber.spooled do
+              @sklaventreiber.whip_it!(ctn, var)
+            end
           ensure
-            @opts[:stdout].spooldown do |meth, args, time|
-              stdout_was.send(meth, *args)
-            end if @opts[:stdout].respond_to?(:spooldown)
-            @opts[:stdout] = stdout_was
             release_signals
           end
           throw :dispatch_handled

@@ -26,6 +26,17 @@ module DbSucker
         @monitor.synchronize { yield }
       end
 
+      def spooled
+        stdout_was = app.opts[:stdout]
+        app.opts[:stdout] = SklavenTreiber::LogSpool.new(stdout_was)
+        yield if block_given?
+      ensure
+        app.opts[:stdout].spooldown do |meth, args, time|
+          stdout_was.send(meth, *args)
+        end if app.opts[:stdout].respond_to?(:spooldown)
+        app.opts[:stdout] = stdout_was
+      end
+
       def whip_it! ctn, var
         @ctn, @var = ctn, var
 
