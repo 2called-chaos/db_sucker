@@ -69,7 +69,7 @@ module DbSucker
         def eval_prompt
           prompt!("eval> ") do |evil|
             break if evil.blank?
-            dump_file "eval-result", true do |f|
+            app.dump_file "eval-result", true do |f|
               begin
                 f.puts("#{evil}\n\n")
                 f.puts(app.sync{ app.instance_eval(evil) })
@@ -86,18 +86,8 @@ module DbSucker
           sklaventreiber.poll.try(:kill)
         end
 
-        def dump_file ctx, open = false, &block
-          "#{app.core_tmp_path}/#{ctx}-#{Time.current.to_i}-#{app.uniqid}.log".tap do |df|
-            FileUtils.mkdir_p(File.dirname(df))
-            File.open(df, "wb", &block) if block
-            if block && open && sdf = Shellwords.shellescape(df)
-              fork { exec("#{app.opts[:core_dump_editor]} #{sdf} ; rm #{sdf}") }
-            end
-          end
-        end
-
         def dump_core
-          dump_file "coredump", true do |f|
+          app.dump_file "coredump", true do |f|
             # thread info
             f.puts "#{Thread.list.length} threads:\n"
             Thread.list.each do |thr|

@@ -18,6 +18,16 @@ module DbSucker
         }.join("\n")
       end
 
+      def dump_file ctx, open = false, &block
+        "#{core_tmp_path}/#{ctx}-#{Time.current.to_i}-#{uniqid}.log".tap do |df|
+          FileUtils.mkdir_p(File.dirname(df))
+          File.open(df, "wb", &block) if block
+          if block && open && sdf = Shellwords.shellescape(df)
+            fork { exec("#{opts[:core_dump_editor]} #{sdf} ; rm #{sdf}") }
+          end
+        end
+      end
+
       def sync &block
         @monitor.synchronize(&block)
       end
