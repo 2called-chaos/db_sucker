@@ -37,11 +37,9 @@ module DbSucker
               @state = :working
               channel, @result = @ctn.nonblocking_channel_result(cmd, channel: true, use_sh: true)
 
-              killer = Thread.new do
-                Thread.current[:itype] = :sklaventreiber_worker_io_pv_killer
-                Thread.current.priority = @worker.app.opts[:tp_sklaventreiber_worker_io_pv_killer]
+              killer = @worker.app.spawn_thread(:sklaventreiber_worker_io_pv_killer) do |thr|
                 loop do
-                  if @worker.should_cancel && !Thread.current[:canceled]
+                  if @worker.should_cancel && !thr[:canceled]
                     if channel.is_a?(Net::SSH::Connection::Channel)
                       if channel[:pty]
                         channel.send_data("\C-c") rescue false
@@ -50,7 +48,7 @@ module DbSucker
                       end
                     end
                     channel.close rescue false
-                    Thread.current[:canceled] = true
+                    thr[:canceled] = true
                   end
                   break unless channel.active?
                   sleep 0.1

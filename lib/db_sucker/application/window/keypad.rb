@@ -28,9 +28,7 @@ module DbSucker
 
         def start_loop
           return false unless enabled?
-          @keyloop = Thread.new do
-            Thread.current[:itype] = :window_keypad_loop
-            Thread.current.priority = app.opts[:tp_window_keypad_loop]
+          @keyloop = app.spawn_thread(:window_keypad_loop) do |thr|
             loop {
               begin
                 handle_input(@window.send(:getch))

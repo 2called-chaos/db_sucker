@@ -40,13 +40,11 @@ module DbSucker
           end
 
           def second_progress channel, status, color = :yellow
-            Thread.new do
-              Thread.current[:itype] = :sklaventreiber_worker_second_progress
-              Thread.current.priority = app.opts[:tp_sklaventreiber_worker_second_progress]
-              Thread.current[:iteration] = 0
-              Thread.current[:started_at] = Time.current
+            app.spawn_thread(:sklaventreiber_worker_second_progress) do |thr|
+              thr[:iteration] = 0
+              thr[:started_at] = Time.current
               loop do
-                if @should_cancel && !Thread.current[:canceled]
+                if @should_cancel && !thr[:canceled]
                   if channel.is_a?(Net::SSH::Connection::Channel)
                     if channel[:pty]
                       channel.send_data("\C-c") rescue false
@@ -56,9 +54,9 @@ module DbSucker
                   end
                   channel.try(:close) rescue false
                   Process.kill(:SIGINT, channel[:ipc_thread].pid) if channel[:ipc_thread]
-                  Thread.current[:canceled] = true
+                  thr[:canceled] = true
                 end
-                stat = status.gsub(":seconds", human_seconds(Time.current - Thread.current[:started_at]))
+                stat = status.gsub(":seconds", human_seconds(Time.current - thr[:started_at]))
                 #stat = stat.gsub(":workers", channel[:workers].to_s.presence || "?") if is_thread
                 if channel[:error_message]
                   @status = ["[ERROR] #{channel[:error_message]}", :red]
@@ -71,7 +69,7 @@ module DbSucker
                 end
                 break unless channel.active?
                 sleep 0.1
-                Thread.current[:iteration] += 1
+                thr[:iteration] += 1
               end
             end
           end

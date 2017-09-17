@@ -35,11 +35,9 @@ module DbSucker
         end
 
         def start_window_loop
-          @loop = Thread.new do
-            Thread.current[:itype] = :window_draw_loop
-            Thread.current.priority = @app.opts[:tp_window_draw_loop]
+          @loop = app.spawn_thread(:window_draw_loop) do |thr|
             loop do
-              break if Thread.current[:stop]
+              break if thr[:stop]
               refresh_screen if app.opts[:window_draw]
               sleep app.opts[:window_refresh_delay]
             end

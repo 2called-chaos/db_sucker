@@ -36,6 +36,19 @@ module DbSucker
         Digest::SHA1.hexdigest(SecureRandom.urlsafe_base64(128))
       end
 
+      def spawn_thread type, &block
+        sync do
+          if !@opts[:"tp_#{type}"]
+            warning "Thread type `#{type}' has no priority setting, defaulting to 0..."
+          end
+          Thread.new do
+            Thread.current[:itype] = type
+            Thread.current.priority = @opts[:"tp_#{type}"]
+            block.call(Thread.current)
+          end
+        end
+      end
+
 
       # =================
       # = Configuration =

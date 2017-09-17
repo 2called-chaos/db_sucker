@@ -33,16 +33,14 @@ module DbSucker
             end
 
             def start_loop
-              @poll = Thread.new do
-                Thread.current[:itype] = :sklaventreiber_throughput
-                Thread.current.priority = app.opts[:tp_sklaventreiber_throughput]
-                Thread.current[:polling] = 0
+              @poll = app.spawn_thread(:sklaventreiber_throughput) do |thr|
+                thr[:polling] = 0
                 loop do
                   sync {
-                    Thread.current[:polling] = @polling.length
+                    thr[:polling] = @polling.length
                     @polling.each(&:ping)
                   }
-                  break if Thread.current[:stop]
+                  break if thr[:stop]
                   sleep 0.1
                 end
               end

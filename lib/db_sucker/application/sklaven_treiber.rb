@@ -130,13 +130,11 @@ module DbSucker
       end
 
       def _start_ssh_poll
-        @poll = Thread.new do
-          Thread.current[:itype] = :sklaventreiber_ssh_poll
-          Thread.current.priority = @app.opts[:tp_sklaventreiber_ssh_poll]
-          Thread.current[:iteration] = 0
+        @poll = app.spawn_thread(:sklaventreiber_ssh_poll) do |thr|
+          thr[:iteration] = 0
           @ctn.loop_ssh(0.1) {
-            Thread.current[:iteration] += 1
-            Thread.current[:last_iteration] = Time.current
+            thr[:iteration] += 1
+            thr[:last_iteration] = Time.current
             @workers.select{|w| !w.done? || w.sshing }.any?
           }
         end
@@ -156,16 +154,14 @@ module DbSucker
         @status = ["running in main thread...", "green"]
 
         # control thread
-        ctrlthr = Thread.new do
-          Thread.current[:itype] = :sklaventreiber_worker_ctrl
-          Thread.current.priority = @app.opts[:tp_sklaventreiber_worker_ctrl]
+        ctrlthr = spawn_thread(:sklaventreiber_worker_ctrl) do |thr|
           loop do
             if $core_runtime_exiting && $core_runtime_exiting < 100
               $core_runtime_exiting += 100
               @workers.each(&:cancel!)
-              Thread.current[:stop] = true
+              thr[:stop] = true
             end
-            break if Thread.current[:stop]
+            break if thr[:stop]
             sleep 0.1
           end
         end
@@ -184,11 +180,9 @@ module DbSucker
         # initializing consumer threads
         cnum.times do |wi|
           @status = ["starting consumer #{wi+1}/#{cnum}", "blue"]
-          @threads << Thread.new {
-            Thread.current[:itype] = :sklaventreiber_worker
-            Thread.current.priority = @app.opts[:tp_sklaventreiber_worker]
-            Thread.current[:managed_worker] = wi
-            sleep 0.1 until Thread.current[:start] || $core_runtime_exiting
+          @threads << spawn_thread(:sklaventreiber_worker) {|thr|
+            thr[:managed_worker] = wi
+            sleep 0.1 until thr[:start] || $core_runtime_exiting
             _queueoff
           }
         end
