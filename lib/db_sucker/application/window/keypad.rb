@@ -87,7 +87,7 @@ module DbSucker
         end
 
         def dump_file ctx, open = false, &block
-          "#{app.core_tmp_path}/#{ctx}-#{Time.current.to_i}.log".tap do |df|
+          "#{app.core_tmp_path}/#{ctx}-#{Time.current.to_i}-#{app.uniqid}.log".tap do |df|
             FileUtils.mkdir_p(File.dirname(df))
             File.open(df, "wb", &block) if block
             if block && open && sdf = Shellwords.shellescape(df)
