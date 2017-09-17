@@ -72,6 +72,7 @@ module DbSucker
         window_draw: true, # wether to refresh screen or not
         window_refresh_delay: 0.25, # refresh screen every so many seconds
         window_keypad: true, # allow keyboard controls
+        window_spinner: :circle_quarter, # change spinner... why is this configurable?
         consumers: 10, # amount of workers to run at the same time
 
         # thread priorities (-3..+3)

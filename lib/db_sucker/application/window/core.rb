@@ -2,6 +2,26 @@ module DbSucker
   class Application
     class Window
       module Core
+        UnknownSpinnerError = Class.new(::RuntimeError)
+        SPINNERS = {
+          arrows: "←↖↑↗→↘↓↙",
+          blocks: "▁▃▄▅▆▇█▇▆▅▄▃",
+          blocks2: "▉▊▋▌▍▎▏▎▍▌▋▊▉",
+          blocks3: "▖▘▝▗",
+          blocks4: "▌▀▐▄",
+          forks: "┤┘┴└├┌┬┐",
+          triangles: "◢◣◤◥",
+          trbl_square: "◰◳◲◱",
+          trbl_circle: "◴◷◶◵",
+          circle_half: "◐◓◑◒",
+          circle_quarter: "◜◝◞◟",
+          circle_quarter2: "╮╯╰╭",
+          unix: "|/-\\",
+          bomb: ".oO@*",
+          eye: "◡⊙◠",
+          diamond: "◇◈◆",
+        }
+
         def start
           @keypad.start_loop
           start_window_loop
@@ -30,6 +50,16 @@ module DbSucker
           return unless @loop
           @loop[:stop] = true
           @loop.join
+        end
+
+        def choose_spinner
+          spinner = app.opts[:window_spinner]
+          spinner = SPINNERS.keys.sample if spinner == :random
+          if s = SPINNERS[spinner]
+            @spinner_frames = s.split("").reverse.freeze
+          else
+            raise UnknownSpinnerError, "The spinner `#{spinner}' does not exist, use :random or one of: #{SPINNERS.keys * ", "}"
+          end
         end
 
         def init!

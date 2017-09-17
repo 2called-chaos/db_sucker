@@ -67,6 +67,10 @@ module DbSucker
             "#{local_tmp_path}/#{file}"
           end
 
+          def spinner_frame
+            @spinner_frames.unshift(@spinner_frames.pop)[0]
+          end
+
           def copy_file_destination dstfile
             d, dt = Time.current.strftime("%Y-%m-%d"), Time.current.strftime("%H-%M-%S")
 

@@ -9,7 +9,7 @@ module DbSucker
       COL3 = 20
       OutputHelper.hook(self)
 
-      attr_reader :app, :sklaventreiber, :keypad, :tick
+      attr_reader :app, :sklaventreiber, :keypad, :tick, :spinner_frames
       attr_accessor :view
 
       def initialize app, sklaventreiber
@@ -20,6 +20,7 @@ module DbSucker
         @line = 0
         @tick = 0
         @view = :status
+        choose_spinner
       end
 
       def refresh_screen
@@ -128,14 +129,7 @@ module DbSucker
           when :done then green("✔")
           when :failed then red("✘")
           when :canceled then red("⊘")
-          when :running then
-            c = case @tick % 4
-              when 0 then "◜" # "╭"
-              when 1 then "◝" # "╮"
-              when 2 then "◞" # "╯"
-              when 3 then "◟" # "╰"
-            end
-            yellow "#{c}"
+          when :running then yellow("#{worker.spinner_frame}")
         end
 
         # table_name

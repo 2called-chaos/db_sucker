@@ -17,6 +17,7 @@ module DbSucker
           @table = table
           @monitor = Monitor.new
           @timings = {}
+          @spinner_frames = sklaventreiber.window.try(:spinner_frames).try(:dup) || []
           @perform = %w[].tap do |perform|
             perform << "r_dump_file"                                                                  # PV status (bytes + seconds)
             perform << "r_calculate_raw_hash" if ctn.integrity?                                       # PV status
