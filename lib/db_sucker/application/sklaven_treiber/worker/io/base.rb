@@ -7,7 +7,7 @@ module DbSucker
             UnknownFormatterError = Class.new(::ArgumentError)
             DataIntegrityError = Class.new(::RuntimeError)
             STATUS_FORMATTERS = [:none, :minimal, :full]
-            attr_reader :status_format, :state, :operror, :offset, :closing, :local, :remote, :ctn
+            attr_reader :status_format, :state, :operror, :offset, :closing, :local, :remote, :ctn, :verify_handle
             attr_accessor :read_size, :label, :entity, :filesize, :throughput, :mode
             OutputHelper.hook(self)
 
@@ -30,7 +30,6 @@ module DbSucker
               @filesize = 0
 
               # callbacks
-              @integrity = Proc.new {}
               @abort_if = Proc.new { false }
               @on_error = Proc.new {}
               @on_complete = Proc.new {}
@@ -48,10 +47,6 @@ module DbSucker
               @state = :idle
               @offset = 0
               @throughput.reset_stats
-            end
-
-            def integrity &block
-              @integrity = block
             end
 
             def abort_if &block
@@ -127,6 +122,7 @@ module DbSucker
                 when :verifying
                   r << "#{@label}:"
                   r << " verifying..."
+                  r << " #{@verify_handle.throughput.f_done_percentage}" if @verify_handle.respond_to?(:throughput)
                 when :done
                   if @mode == :nofs
                     r << "#{@entity || @label} complete(?): #{tp.f_offset}"
@@ -182,6 +178,7 @@ module DbSucker
                 when :verifying
                   yellow "#{_this.label}: "
                   gray " verifying..."
+                  gray " #{_this.verify_handle.throughput.f_done_percentage}" if _this.verify_handle.respond_to?(:throughput)
                 when :done
                   if _this.mode == :nofs
                     green "#{_this.entity || _this.label} complete(?): "

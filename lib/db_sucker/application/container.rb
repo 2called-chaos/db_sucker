@@ -48,10 +48,11 @@ module DbSucker
 
       def calculate_remote_integrity_hash_command file, pv_binary = false
         return unless integrity?
+        icmd = "#{integrity_binary}#{integrity_sha}"
         if pv_binary.presence
-          %{#{pv_binary} -n -b #{file} | #{integrity}}
+          %{#{pv_binary} -n -b #{file} | #{icmd}}
         else
-          %{#{integrity} #{file}}
+          %{#{icmd} #{file}}
         end
       end
 

@@ -59,21 +59,15 @@ module DbSucker
             [nfile, cfg.blocking_channel_result(cmd, channel: true, use_sh: true, blocking: blocking)]
           end
 
-          def calculate_local_integrity_hash file, blocking = true
-            return unless integrity?
-            cmd = "#{integrity} #{file}"
-            [cmd, local_execute(cmd, thread: !blocking, blocking: blocking, close_stdin: true)]
-          end
-
-          def wait_for_workers
-            channelfy_thread Thread.new {
-              loop do
-                Thread.current[:workers] = $importing.synchronize { $importing.length }
-                break if Thread.current[:workers] == 0
-                sleep 1
-              end
-            }
-          end
+          # def wait_for_workers
+          #   channelfy_thread Thread.new {
+          #     loop do
+          #       Thread.current[:workers] = $importing.synchronize { $importing.length }
+          #       break if Thread.current[:workers] == 0
+          #       sleep 1
+          #     end
+          #   }
+          # end
 
           # def load_local_file worker, file, &block
           #   imp = data["importer"]

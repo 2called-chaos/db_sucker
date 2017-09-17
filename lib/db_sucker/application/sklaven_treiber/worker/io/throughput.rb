@@ -90,13 +90,14 @@ module DbSucker
             end
 
             class Instance
-              attr_reader :ioop, :categories
+              attr_reader :ioop, :categories, :sopts
 
               def initialize manager, ioop
                 @manager = manager
                 @ioop = ioop
                 @monitor = Monitor.new
                 @categories = [:total]
+                @sopts = { perc_modifier: 1, perc_base: 0 }
                 reset_stats
               end
 
@@ -154,7 +155,7 @@ module DbSucker
               expose(:eta2) { ping; @stats[:eta2] }
               expose(:bps) { ping; @stats[:bps] }
               expose(:bps_avg) { ping; @stats[:bps_avg] }
-              expose(:done_percentage) { filesize == 0 ? 100 : offset == 0 ? 0 : (offset.to_d / filesize.to_d * 100.to_d) }
+              expose(:done_percentage) { @sopts[:perc_base].to_d + @sopts[:perc_modifier].to_d * (filesize == 0 ? 100 : offset == 0 ? 0 : (offset.to_d / filesize.to_d * 100.to_d)) }
               expose(:remain_percentage) { 100.to_d - done_percentage }
               expose(:bytes_remain) { filesize - offset }
               expose(:runtime) { @started_at ? (@ended_at || Time.current) - @started_at : 0 }

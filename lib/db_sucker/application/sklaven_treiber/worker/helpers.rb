@@ -27,6 +27,12 @@ module DbSucker
             end
           end
 
+          def file_shasum *args, &block
+            IO::Shasum.new(self, *args).tap do |op|
+              block.try(:call, op)
+            end
+          end
+
           def pv_wrap *args, &block
             IO::PvWrapper.new(self, *args).tap do |op|
               block.try(:call, op)

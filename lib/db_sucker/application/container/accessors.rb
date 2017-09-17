@@ -23,12 +23,16 @@ module DbSucker
           Variation.new(self, v, vd)
         end
 
-        def integrity
-          (source["integrity"].nil? ? "shasum -ba512" : source["integrity"]).presence
+        def integrity_binary
+          (source["integrity_binary"].nil? ? "shasum -ba" : source["integrity_binary"]).presence
+        end
+
+        def integrity_sha
+          source["integrity_sha"].nil? ? 512 : source["integrity_sha"]
         end
 
         def integrity?
-          !!integrity
+          !!integrity_sha
         end
 
         def ssh_key_files

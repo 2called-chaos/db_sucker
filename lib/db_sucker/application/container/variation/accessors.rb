@@ -23,14 +23,6 @@ module DbSucker
             source["gzip_binary"] || "gzip"
           end
 
-          def integrity
-            (data["integrity"].nil? ? "shasum -ba512" : data["integrity"]).presence
-          end
-
-          def integrity?
-            ctn.integrity? && integrity
-          end
-
           def copies_file?
             data["file"]
           end

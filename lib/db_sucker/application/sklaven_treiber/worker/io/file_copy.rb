@@ -4,12 +4,13 @@ module DbSucker
       class Worker
         module IO
           class FileCopy < Base
-            attr_accessor :use_tmp
+            attr_accessor :use_tmp, :integrity
 
             def init
               @label = "copying"
               @entity = "copy"
               @use_tmp = true
+              @integrity = true
               @throughput.categories << :io << :io_file_copy
             end
 
@@ -46,12 +47,31 @@ module DbSucker
                 FileUtils.mv(@tmploc, @local) if @use_tmp
 
                 @state = :verifying
-                src_hash = @integrity.call(@remote)
-                dst_hash = @integrity.call(@local)
+                src_hash = verify_file(@remote, 0)
+                dst_hash = verify_file(@local, 1)
                 if src_hash != dst_hash
                   raise DataIntegrityError, "Integrity check failed! [SRC](#{src_hash}) != [DST](#{dst_hash})"
                 end
               end
+            end
+
+            def verify_file file, index = 0
+              result = false
+              @worker.file_shasum(@ctn, file) do |fc|
+                fc.sha = @ctn.integrity_sha
+                fc.status_format = :none
+                fc.throughput.sopts[:perc_modifier] = 0.5
+                fc.throughput.sopts[:perc_base] = index * 50
+                @verify_handle = fc
+
+                fc.abort_if { @should_cancel }
+                fc.on_success do
+                  result = fc.result
+                end
+                fc.verify!
+              end
+              @verify_handle = false
+              return result
             end
           end
         end
