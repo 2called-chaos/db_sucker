@@ -48,7 +48,7 @@ module DbSucker
             red("    #{l}")
           end
         end
-        sleep 1
+        Thread.current.wait(1)
       end
 
       def _view_status

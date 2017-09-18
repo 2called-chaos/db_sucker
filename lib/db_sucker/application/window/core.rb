@@ -39,7 +39,7 @@ module DbSucker
             loop do
               break if thr[:stop]
               refresh_screen if app.opts[:window_draw]
-              sleep app.opts[:window_refresh_delay]
+              thr.wait(app.opts[:window_refresh_delay])
             end
           end
         end
@@ -47,7 +47,7 @@ module DbSucker
         def stop_window_loop
           return unless @loop
           @loop[:stop] = true
-          @loop.join
+          @loop.signal.join
         end
 
         def choose_spinner

@@ -159,10 +159,11 @@ module DbSucker
             if $core_runtime_exiting && $core_runtime_exiting < 100
               $core_runtime_exiting += 100
               @workers.each(&:cancel!)
+              app.wakeup_handlers
               thr[:stop] = true
             end
             break if thr[:stop]
-            sleep 0.1
+            thr.wait(0.1)
           end
         end
 
@@ -170,7 +171,7 @@ module DbSucker
           _queueoff
         ensure
           ctrlthr[:stop] = true
-          ctrlthr.join
+          ctrlthr.signal.join
         end
       end
 
@@ -182,20 +183,21 @@ module DbSucker
           @status = ["starting consumer #{wi+1}/#{cnum}", "blue"]
           @threads << app.spawn_thread(:sklaventreiber_worker) {|thr|
             thr[:managed_worker] = wi
-            sleep 0.1 until thr[:start] || $core_runtime_exiting
+            thr.wait(0.1) until thr[:start] || $core_runtime_exiting
             _queueoff
           }
         end
 
         # start consumer threads
         @status = ["running", "green"]
-        @threads.each{|t| t[:start] = true }
+        @threads.each{|t| t[:start] = true; t.signal }
 
         # master thread (control)
         while @threads.any?(&:alive?)
           if $core_runtime_exiting && $core_runtime_exiting < 100
             $core_runtime_exiting += 100
             @workers.each(&:cancel!)
+            app.wakeup_handlers
           end
           sleep 0.1
         end

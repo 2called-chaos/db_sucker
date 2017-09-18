@@ -43,6 +43,7 @@ module DbSucker
             app.spawn_thread(:sklaventreiber_worker_second_progress) do |thr|
               thr[:iteration] = 0
               thr[:started_at] = Time.current
+              channel[:handler] = thr if channel.respond_to?(:[]=)
               loop do
                 if @should_cancel && !thr[:canceled]
                   if channel.is_a?(Net::SSH::Connection::Channel)
@@ -68,7 +69,7 @@ module DbSucker
                   @status = [stat, color]
                 end
                 break unless channel.active?
-                sleep 0.1
+                thr.wait(0.1)
                 thr[:iteration] += 1
               end
             end

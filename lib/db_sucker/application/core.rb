@@ -42,9 +42,19 @@ module DbSucker
             warning "Thread type `#{type}' has no priority setting, defaulting to 0..."
           end
           Thread.new do
-            Thread.current[:itype] = type
-            Thread.current.priority = @opts[:"tp_#{type}"]
-            block.call(Thread.current)
+            thr = Thread.current
+            thr[:monitor] = Monitor.new
+            thr[:signal] = thr[:monitor].new_cond
+            thr[:itype] = type
+            thr.priority = @opts[:"tp_#{type}"]
+
+            def thr.signal
+              self[:monitor].synchronize{ self[:signal].broadcast } ; self
+            end
+            def thr.wait(*a)
+              self[:monitor].synchronize{ self[:signal].wait(*a) }
+            end
+            block.call(thr)
           end
         end
       end
@@ -63,6 +73,10 @@ module DbSucker
         end
 
         thr
+      end
+
+      def wakeup_handlers
+        Thread.list.each{|thr| thr.try(:signal) }
       end
 
 

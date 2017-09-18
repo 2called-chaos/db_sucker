@@ -92,7 +92,7 @@ module DbSucker
                 if try > opts[:tries]
                   raise ex
                 else
-                  sleep opts[:sleep_error]
+                  Thread.current.wait(opts[:sleep_error])
                   retry
                 end
               ensure

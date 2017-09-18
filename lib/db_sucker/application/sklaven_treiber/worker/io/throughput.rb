@@ -41,7 +41,7 @@ module DbSucker
                     @polling.each(&:ping)
                   }
                   break if thr[:stop]
-                  sleep 0.1
+                  thr.wait(0.1)
                 end
               end
             end
@@ -51,7 +51,7 @@ module DbSucker
                 return unless @poll
                 @poll[:stop] = true
               end
-              @poll.join
+              @poll.signal.join
             end
 
             def commit! bytes, *categories

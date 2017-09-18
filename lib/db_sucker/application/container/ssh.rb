@@ -147,7 +147,10 @@ module DbSucker
                     result.enq(data, :stderr)
                   end
 
-                  ch.on_close { result.close! }
+                  ch.on_close do
+                    result.close!
+                    ch[:handler].try(:signal)
+                  end
                 end
               }
               if opts[:request_pty]

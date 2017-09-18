@@ -51,7 +51,7 @@ module DbSucker
                     thr[:canceled] = true
                   end
                   break unless channel.active?
-                  sleep 0.1
+                  thr.wait(0.1)
                 end
               end
 
@@ -59,7 +59,7 @@ module DbSucker
                 next unless grp == :stderr
                 @offset = line.to_i
               end
-              killer.join
+              killer.signal.join
             end
           end
         end
