@@ -1,7 +1,7 @@
 module DbSucker
   class Application
     class EventedResultset
-      SetAlreadyClosed = Class.new(::RuntimeError)
+      SetAlreadyClosedError = Class.new(::RuntimeError)
       include Enumerable
 
       def initialize
@@ -18,7 +18,7 @@ module DbSucker
 
       def enq data, group = nil
         sync do
-          raise SetAlreadyClosed, "failed to enqueue data: resultset is already closed" if closed?
+          raise SetAlreadyClosedError, "failed to enqueue data: resultset is already closed" if closed?
           @store << [group.try(:to_sym), data]
           @value_signal.broadcast
         end
