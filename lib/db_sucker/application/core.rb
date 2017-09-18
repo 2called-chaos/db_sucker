@@ -49,6 +49,22 @@ module DbSucker
         end
       end
 
+      def channelfy_thread thr
+        def thr.active?
+          alive?
+        end
+
+        def thr.closed?
+          alive?
+        end
+
+        def thr.closing?
+          !alive?
+        end
+
+        thr
+      end
+
 
       # =================
       # = Configuration =
