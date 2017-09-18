@@ -154,7 +154,7 @@ module DbSucker
         @status = ["running in main thread...", "green"]
 
         # control thread
-        ctrlthr = spawn_thread(:sklaventreiber_worker_ctrl) do |thr|
+        ctrlthr = app.spawn_thread(:sklaventreiber_worker_ctrl) do |thr|
           loop do
             if $core_runtime_exiting && $core_runtime_exiting < 100
               $core_runtime_exiting += 100
@@ -180,7 +180,7 @@ module DbSucker
         # initializing consumer threads
         cnum.times do |wi|
           @status = ["starting consumer #{wi+1}/#{cnum}", "blue"]
-          @threads << spawn_thread(:sklaventreiber_worker) {|thr|
+          @threads << app.spawn_thread(:sklaventreiber_worker) {|thr|
             thr[:managed_worker] = wi
             sleep 0.1 until thr[:start] || $core_runtime_exiting
             _queueoff
