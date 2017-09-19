@@ -134,7 +134,7 @@ module DbSucker
                   end
                 end
                 if wrk
-                  wrk.cancel! "canceled by user"
+                  catch(:abort_execution) { wrk.cancel!("canceled by user") }
                 else
                   prompt!("Could not find any worker by the pattern `#{args[0]}'", color: :red)
                 end

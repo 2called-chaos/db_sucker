@@ -52,7 +52,7 @@ module DbSucker
       ensure
         app.sandboxed do
           @status = ["terminating (canceling workers)", "red"]
-          @workers.each(&:cancel!)
+          @workers.each {|w| catch(:abort_execution) { w.cancel! } }
         end
         app.sandboxed do
           @status = ["terminating (SSH poll)", "red"]
@@ -158,7 +158,7 @@ module DbSucker
           loop do
             if $core_runtime_exiting && $core_runtime_exiting < 100
               $core_runtime_exiting += 100
-              @workers.each(&:cancel!)
+              @workers.each {|w| catch(:abort_execution) { w.cancel! } }
               app.wakeup_handlers
               thr[:stop] = true
             end
@@ -196,7 +196,7 @@ module DbSucker
         while @threads.any?(&:alive?)
           if $core_runtime_exiting && $core_runtime_exiting < 100
             $core_runtime_exiting += 100
-            @workers.each(&:cancel!)
+            @workers.each {|w| catch(:abort_execution) { w.cancel! } }
             app.wakeup_handlers
           end
           sleep 0.1
