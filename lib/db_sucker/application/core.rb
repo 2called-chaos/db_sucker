@@ -150,12 +150,16 @@ module DbSucker
           $core_runtime_exiting = 2
           Kernel.puts "Terminating..."
         end
+        Signal.trap("USR1") do
+          dump_core
+        end
       end
 
       def release_signals
         debug "Releasing INT signal..."
         Signal.trap("INT", "DEFAULT")
         Signal.trap("TERM", "DEFAULT")
+        Signal.trap("USR1", "DEFAULT")
       end
 
       def haltpoint
