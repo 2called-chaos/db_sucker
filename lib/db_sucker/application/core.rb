@@ -28,6 +28,33 @@ module DbSucker
         end
       end
 
+      def dump_core
+        dump_file "coredump", true do |f|
+          # thread info
+          f.puts "#{Thread.list.length} threads:\n"
+          Thread.list.each do |thr|
+            f.puts "#{thr.inspect}"
+            f.puts "      iType: #{thr == Thread.main ? :main_thread : thr[:itype] || :uncategorized}"
+            f.puts "   Priority: #{thr.priority}"
+            f.puts "     T-Vars: #{thr.thread_variables.inspect}"
+            thr.thread_variables.each {|k| f.puts "             #{k} => #{thr.thread_variable(k)}" }
+            f.puts "     F-Vars: #{thr.keys.inspect}"
+            thr.keys.each {|k| f.puts "             #{k} => #{thr[k]}" }
+            f.puts "  Backtrace: #{thr.backtrace.length}"
+            thr.backtrace.each {|l| f.puts "             #{l}" }
+            #f.puts "     Caller: #{thr.backtrace_locations.try(:length) || "unknown"}"
+            #thr.backtrace_locations.each {|l| f.puts "             #{l}" } if thr.backtrace_locations
+            f.puts
+          end
+
+          # worker info
+          f.puts "\n\n#{sklaventreiber.workers.length} workers:\n"
+          sklaventreiber.workers.each do |w|
+            f.puts "#{"[SSH] " if w.sshing} #{w.descriptive} #{w.state}".strip
+          end
+        end
+      end
+
       def sync &block
         @monitor.synchronize(&block)
       end

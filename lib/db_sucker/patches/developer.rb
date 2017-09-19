@@ -11,8 +11,8 @@ module DbSucker
               %{:#{k}=>#{v}(#{app.human_bytes(v)})}
             end
             app.debug "IO-stats: {#{iostats * ", "}}"
-            app.sklaventreiber.window.keypad.dump_core if Thread.list.length > 1
           end
+          app.dump_core if Thread.list.length > 1
           app.debug "RSS: #{app.human_bytes(`ps h -p #{Process.pid} -o rss`.strip.split("\n").last.to_i * 1024)}"
         end
 
