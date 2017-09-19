@@ -28,7 +28,7 @@ module DbSucker
 
       def spooled
         stdout_was = app.opts[:stdout]
-        app.opts[:stdout] = SklavenTreiber::LogSpool.new(stdout_was)
+        app.opts[:stdout] = SklavenTreiber::LogSpool.new(stdout_was) if app.opts[:window_enabled]
         yield if block_given?
       ensure
         app.opts[:stdout].spooldown do |meth, args, time|
@@ -47,7 +47,7 @@ module DbSucker
         _start_ssh_poll
         @throughput.start_loop
 
-        @sleep_before_exit = 3
+        @sleep_before_exit = 3 if @window
         _run_consumers
       ensure
         app.sandboxed do
