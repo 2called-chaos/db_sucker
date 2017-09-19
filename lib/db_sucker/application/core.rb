@@ -37,24 +37,33 @@ module DbSucker
       end
 
       def spawn_thread type, &block
+        waitlock = Queue.new
         sync do
           if !@opts[:"tp_#{type}"]
             warning "Thread type `#{type}' has no priority setting, defaulting to 0..."
           end
+
+          # spawn thread
           Thread.new do
-            thr = Thread.current
+            waitlock.pop
+            block.call(Thread.current)
+          end.tap do |thr|
+            # set lock, signal, type and priority
             thr[:monitor] = Monitor.new
             thr[:signal] = thr[:monitor].new_cond
             thr[:itype] = type
             thr.priority = @opts[:"tp_#{type}"]
 
+            # define helper methods
             def thr.signal
               self[:monitor].synchronize{ self[:signal].broadcast } ; self
             end
             def thr.wait(*a)
               self[:monitor].synchronize{ self[:signal].wait(*a) }
             end
-            block.call(thr)
+
+            # start thread
+            waitlock << true
           end
         end
       end
