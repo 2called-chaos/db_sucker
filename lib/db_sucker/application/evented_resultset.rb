@@ -121,8 +121,12 @@ module DbSucker
           if !closed? && !@store[Thread.current[self.object_id.to_s]+1]
             @value_signal.wait
           end
-          Thread.current[self.object_id.to_s] += 1
-          @store[Thread.current[self.object_id.to_s]].try(:last)
+          if @store[Thread.current[self.object_id.to_s]+1]
+            Thread.current[self.object_id.to_s] += 1
+            @store[Thread.current[self.object_id.to_s]].try(:last)
+          else
+            false
+          end
         end
       end
 
@@ -132,8 +136,12 @@ module DbSucker
           if !closed? && !@store[Thread.current[self.object_id.to_s]+1]
             @value_signal.wait
           end
-          Thread.current[self.object_id.to_s] += 1
-          @store[Thread.current[self.object_id.to_s]]
+          if @store[Thread.current[self.object_id.to_s]+1]
+            Thread.current[self.object_id.to_s] += 1
+            @store[Thread.current[self.object_id.to_s]]
+          else
+            false
+          end
         end
       end
     end
