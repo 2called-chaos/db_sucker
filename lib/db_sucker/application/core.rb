@@ -75,23 +75,33 @@ module DbSucker
             waitlock.pop
             block.call(Thread.current)
           end.tap do |thr|
-            # set lock, signal, type and priority
-            thr[:monitor] = Monitor.new
-            thr[:signal] = thr[:monitor].new_cond
+            # set type and priority
             thr[:itype] = type
             thr.priority = @opts[:"tp_#{type}"]
 
-            # define helper methods
-            def thr.signal
-              self[:monitor].synchronize{ self[:signal].broadcast } ; self
-            end
-            def thr.wait(*a)
-              self[:monitor].synchronize{ self[:signal].wait(*a) }
-            end
+            # add signal methods
+            signalify_thread(thr)
 
             # start thread
             waitlock << true
           end
+        end
+      end
+
+      def signalify_thread thr
+        # set lock and signal
+        thr[:monitor] = Monitor.new
+        thr[:signal] = thr[:monitor].new_cond
+
+        # define helper methods
+        def thr.signal
+          self[:monitor].synchronize{ self[:signal].broadcast } ; self
+        end
+        def thr.wait(*a)
+          self[:monitor].synchronize{ self[:signal].wait(*a) }
+        end
+        def thr.sync(&b)
+          self[:monitor].synchronize(&b)
         end
       end
 
@@ -101,11 +111,11 @@ module DbSucker
         end
 
         def thr.closed?
-          alive?
+          !alive?
         end
 
         def thr.closing?
-          !alive?
+          false
         end
 
         thr
@@ -179,7 +189,7 @@ module DbSucker
 
       def fire which, *args
         return if @disable_event_firing
-        sync { debug "[Event] Firing #{which} (#{@hooks[which].try(:length) || 0} handlers) #{args.map(&:class)}", 99 }
+        sync { debug "[Event] Firing #{which} (#{@hooks[which].try(:length) || 0} handlers) #{args.map(&:to_s)}", 99 }
         @hooks[which] && @hooks[which].each{|h| h.call(self, *args) }
       end
     end

@@ -39,10 +39,52 @@ module DbSucker
             end
           end
 
+          def aquire_slots *which, &block
+            target_thread = Thread.current
+            aquired = []
+            which.each_with_index do |wh, i|
+              if pool = sklaventreiber.slot_pools[wh]
+                channel = app.channelfy_thread app.spawn_thread(:sklaventreiber_worker_slot_progress) {|thr|
+                  thr[:current_task] = target_thread[:current_task] if target_thread[:current_task]
+                  thr[:slot_pool_qindex] = Proc.new { pool.qindex(target_thread) }
+                  pool.aquire(target_thread)
+                }
+                target_thread.wait
+
+                label = "aquiring slot #{i+1}/#{which.length} `#{pool.name}' :slot_pool_qindex(– #%s in queue )(:seconds)..."
+                second_progress(channel, label, :blue).tap{ pool.wait_aquired(target_thread) }.join
+                if pool.aquired?(target_thread)
+                  aquired << wh
+                else
+                  break
+                end
+              else
+                raise SlotPoolNotInitializedError, "slot pool `#{wh}' was never initialized, can't aquire slot"
+              end
+            end
+            begin
+              block.call
+            ensure
+              release_slots(*which)
+            end if (which - aquired).empty? && block
+          end
+
+          def release_slots *which
+            which.each_with_index do |wh, i|
+              if pool = sklaventreiber.slot_pools[wh]
+                pool.release(Thread.current)
+              else
+                raise SlotPoolNotInitializedError, "slot pool `#{wh}' was never initialized, can't release slot (was most likely never aquired)"
+              end
+            end
+          end
+
           def second_progress channel, status, color = :yellow
+            target_thread = Thread.current
             app.spawn_thread(:sklaventreiber_worker_second_progress) do |thr|
               thr[:iteration] = 0
               thr[:started_at] = Time.current
+              thr[:current_task] = target_thread[:current_task] if target_thread[:current_task]
               channel[:handler] = thr if channel.respond_to?(:[]=)
               loop do
                 if @should_cancel && !thr[:canceled]
@@ -58,10 +100,16 @@ module DbSucker
                   thr[:canceled] = true
                 end
                 stat = status.gsub(":seconds", human_seconds(Time.current - thr[:started_at]))
-                #stat = stat.gsub(":workers", channel[:workers].to_s.presence || "?") if is_thread
+                if channel[:slot_pool_qindex].respond_to?(:call)
+                  qi = channel[:slot_pool_qindex].call
+                  re = /:slot_pool_qindex\(([^\)]+)\)/
+                  if stat[re]
+                    stat[re] = qi ? stat[re].match(/\(([^\)]+)\)/)[1].gsub("%s", qi.to_s) : ""
+                  end
+                end
                 if channel[:error_message]
                   @status = ["[ERROR] #{channel[:error_message]}", :red]
-                elsif channel.respond_to?(:active?) && !channel.active?
+                elsif !channel.active?
                   @status = ["[CLOSED] #{stat}", :red]
                 elsif channel.closing?
                   @status = ["[CLOSING] #{stat}", :red]

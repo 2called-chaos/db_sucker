@@ -237,15 +237,19 @@ module DbSucker
 
           def _l_import_file
             cancel!("importing not yet implemented", true)
-            if File.size(@local_file_raw) > 50_000_000 && app.opts[:deferred_import]
-              @local_files_to_remove.delete(@local_file_raw)
-              $deferred_import << [id, ctn, var, table, @local_file_raw]
-              @status = ["Deferring import of large file (#{human_filesize(File.size(@local_file_raw))})...", :green]
-              @got_deferred = true
-              sleep 3
-            else
-              _do_import_file(@local_file_raw)
-            end
+            # if File.size(@local_file_raw) > 50_000_000 && app.opts[:deferred_import]
+            #   @local_files_to_remove.delete(@local_file_raw)
+            #   $deferred_import << [id, ctn, var, table, @local_file_raw]
+            #   @status = ["Deferring import of large file (#{human_filesize(File.size(@local_file_raw))})...", :green]
+            #   @got_deferred = true
+            #   sleep 3
+            # else
+            #   _do_import_file(@local_file_raw)
+            # end
+          end
+
+          def _l_import_file_deferred
+
           end
 
           # def _do_import_file(file, deferred = false)

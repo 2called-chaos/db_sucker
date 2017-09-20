@@ -11,6 +11,7 @@ module DbSucker
     def self.dispatch *a
       new(*a) do |app|
         begin
+          app.signalify_thread(Thread.main)
           Thread.main[:app] = app
           app.load_appconfig
           app.parse_params
@@ -83,6 +84,7 @@ module DbSucker
         tp_sklaventreiber_worker: -1,
         tp_sklaventreiber_worker_ctrl: -1,
         tp_sklaventreiber_worker_local_execute: +2,
+        tp_sklaventreiber_worker_slot_progress: -2,
         tp_sklaventreiber_worker_second_progress: -2,
         tp_sklaventreiber_worker_io_pv_killer: -2,
 
@@ -90,9 +92,30 @@ module DbSucker
         # MUST be windowed! vim, nano, etc. will not work!
         core_dump_editor: "subl -w",
 
-        # amount of workers that can use a slot, false to disable
-        #slot_deferred: 1,
-        # slot_sftp: false,
+        # amount of workers that can use a slot (false = infinite)
+        # you can create as many pools as you want and use them in `routine_pools' setting
+        slot_pools: {
+          remote: false,
+          download: false,
+          local: false,
+          import: 3,
+          deferred: 1,
+        },
+
+        # assign tasks to certain slot pools
+        routine_pools: {
+          r_dump_file: [:remote],
+          r_calculate_raw_hash: [:remote],
+          r_compress_file: [:remote],
+          r_calculate_compressed_hash: [:remote],
+          l_download_file: [:download],
+          l_verify_compressed_hash: [:local],
+          l_copy_file: [:local],
+          l_decompress_file: [:local],
+          l_verify_raw_hash: [:local],
+          l_import_file: [:local, :import],
+          l_import_file_deferred: [:local, :deferred],
+        }
       }
       init_params
       Tie.hook_all!(self)

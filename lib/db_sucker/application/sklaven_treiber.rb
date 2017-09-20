@@ -1,7 +1,7 @@
 module DbSucker
   class Application
     class SklavenTreiber
-      attr_reader :app, :trxid, :window, :data, :status, :monitor, :workers, :poll, :throughput
+      attr_reader :app, :trxid, :window, :data, :status, :monitor, :workers, :poll, :throughput, :slot_pools
 
       def initialize app, trxid
         @app = app
@@ -10,6 +10,7 @@ module DbSucker
         @monitor = Monitor.new
         @workers = []
         @threads = []
+        @slot_pools = {}
         @sleep_before_exit = 0
         @throughput = Worker::IO::Throughput.new(self)
 
@@ -43,6 +44,7 @@ module DbSucker
         _init_window
         _check_remote_tmp_directory
         _select_tables
+        _initialize_slot_pools
         _initialize_workers
         _start_ssh_poll
         @throughput.start_loop
@@ -63,6 +65,7 @@ module DbSucker
         app.sandboxed { @window.try(:stop) }
         app.sandboxed { @ctn.try(:sftp_end) }
         app.sandboxed { @throughput.try(:stop_loop) }
+        app.sandboxed { @slot_pools.each{|n, p| p.close! } }
         app.sandboxed do
           app.puts @window.try(:_render_final_results)
         end
@@ -120,6 +123,12 @@ module DbSucker
         @data[:tables_total] = at.length
       end
 
+      def _initialize_slot_pools
+        app.opts[:slot_pools].each do |name, slots|
+          @slot_pools[name] = SlotPool.new(slots, name)
+        end
+      end
+
       def _initialize_workers
         @status = ["initializing workers 0/#{@data[:tables_transfer]}", "blue"]
 
@@ -156,12 +165,7 @@ module DbSucker
         # control thread
         ctrlthr = app.spawn_thread(:sklaventreiber_worker_ctrl) do |thr|
           loop do
-            if $core_runtime_exiting && $core_runtime_exiting < 100
-              $core_runtime_exiting += 100
-              @workers.each {|w| catch(:abort_execution) { w.cancel! } }
-              app.wakeup_handlers
-              thr[:stop] = true
-            end
+            _control_thread
             break if thr[:stop]
             thr.wait(0.1)
           end
@@ -194,12 +198,8 @@ module DbSucker
 
         # master thread (control)
         while @threads.any?(&:alive?)
-          if $core_runtime_exiting && $core_runtime_exiting < 100
-            $core_runtime_exiting += 100
-            @workers.each {|w| catch(:abort_execution) { w.cancel! } }
-            app.wakeup_handlers
-          end
-          sleep 0.1
+          _control_thread
+          Thread.current.wait(0.1)
         end
         @threads.each(&:join)
       end
@@ -220,6 +220,15 @@ module DbSucker
               sync { @data[:tables_done] += 1 }
             end
           end
+        end
+      end
+
+      def _control_thread
+        if $core_runtime_exiting && $core_runtime_exiting < 100
+          $core_runtime_exiting += 100
+          app.sandboxed { @workers.each {|w| catch(:abort_execution) { w.cancel! } } }
+          app.sandboxed { @slot_pools.each{|n, p| p.softclose! } }
+          app.wakeup_handlers
         end
       end
     end

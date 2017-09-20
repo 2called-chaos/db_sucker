@@ -35,9 +35,11 @@ module DbSucker
 
             def _perform_with_wrapper
               @state = :working
+              target_thread = Thread.current
               channel, @result = @ctn.nonblocking_channel_result(cmd, channel: true, use_sh: true)
 
               killer = @worker.app.spawn_thread(:sklaventreiber_worker_io_pv_killer) do |thr|
+                thr[:current_task] = target_thread[:current_task] if target_thread[:current_task]
                 loop do
                   if @worker.should_cancel && !thr[:canceled]
                     if channel.is_a?(Net::SSH::Connection::Channel)

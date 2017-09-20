@@ -9,6 +9,7 @@ module DbSucker
 
           def aquire thread
             @thread = thread
+            thread[:current_task] = descriptive
             if m = thread[:managed_worker]
               debug "Consumer thread ##{m} aquired worker #{descriptive}"
             else
@@ -64,13 +65,15 @@ module DbSucker
                 _cancelpoint
                 @step = i + 1
                 r = catch(:abort_execution) {
-                  begin
-                    r0 = Time.current
-                    app.fire(:worker_routine_before, self, current_perform)
-                    send(:"_#{m}")
-                  ensure
-                    app.fire(:worker_routine_after, self, current_perform)
-                    @timings[m] = Time.current - r0
+                  aquire_slots(*app.opts[:routine_pools][m[1..-1]]) do
+                    begin
+                      r0 = Time.current
+                      app.fire(:worker_routine_before, self, current_perform)
+                      send(:"_#{m}")
+                    ensure
+                      app.fire(:worker_routine_after, self, current_perform)
+                      @timings[m] = Time.current - r0
+                    end
                   end
                   nil
                 }

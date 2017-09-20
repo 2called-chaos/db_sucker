@@ -2,6 +2,8 @@ module DbSucker
   class Application
     class SklavenTreiber
       class Worker
+        SlotPoolNotInitializedError = Class.new(::RuntimeError)
+
         include Core
         include Accessors
         include Helpers
