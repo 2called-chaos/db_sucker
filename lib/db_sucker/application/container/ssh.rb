@@ -114,14 +114,14 @@ module DbSucker
 
           def kill_remote_process pid, sig = :INT
             ssh_start(true) do |ssh|
-              blocking_channel_result("kill -#{sig} #{pid}", ssh: ssh)
+              blocking_channel_result("kill -#{sig} -#{pid}", ssh: ssh)
             end
           end
 
           def blocking_channel_result cmd, opts = {}
             opts = opts.reverse_merge(ssh: nil, blocking: true, channel: false, request_pty: false, use_sh: false)
             if opts[:use_sh]
-              cmd = %{/bin/sh -c 'echo $$ && exec #{cmd}'}
+              cmd = %{/bin/sh -c 'echo $(ps -o pgid= $$ | grep -o [0-9]*) && #{cmd}'}
               pid_monitor = Monitor.new
               pid_signal = pid_monitor.new_cond
             end
