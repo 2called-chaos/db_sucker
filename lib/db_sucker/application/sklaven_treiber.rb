@@ -27,6 +27,22 @@ module DbSucker
         @monitor.synchronize { yield }
       end
 
+      def pause_worker worker
+        sync { worker.pause }
+      end
+
+      def unpause_worker worker
+        sync { worker.unpause }
+      end
+
+      def pause_all_workers
+        sync { @workers.each {|wrk| pause_worker(wrk) } }
+      end
+
+      def unpause_all_workers
+        sync { @workers.each {|wrk| unpause_worker(wrk) } }
+      end
+
       def spooled
         stdout_was = app.opts[:stdout]
         app.opts[:stdout] = SklavenTreiber::LogSpool.new(stdout_was) if app.opts[:window_enabled]

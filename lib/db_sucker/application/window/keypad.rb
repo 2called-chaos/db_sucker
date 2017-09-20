@@ -81,6 +81,29 @@ module DbSucker
           end
         end
 
+        def _detect_worker arg, &block
+          sklaventreiber.sync do
+            if arg == "--all"
+              sklaventreiber.workers.each{|w| block.call(w) }
+            else
+              wrk = sklaventreiber.workers.detect do |w|
+                if arg.start_with?("^")
+                  w.table.match(/#{arg}/i)
+                elsif arg.start_with?("/")
+                  w.table.match(/#{arg[1..-1]}/i)
+                else
+                  w.table == arg
+                end
+              end
+              if wrk
+                block.call(wrk)
+              else
+                prompt!("Could not find any worker by the pattern `#{args[0]}'", color: :red)
+              end
+            end
+          end
+        end
+
         def eval_prompt
           prompt!("eval> ") {|evil| _eval(evil) }
         end
@@ -113,32 +136,32 @@ module DbSucker
               when "q!", "quit!" then $core_runtime_exiting = 1
               when "dump" then dump_core
               when "eval" then args.any? ? _eval(args.join(" ")) : eval_prompt
+              when "p", "pause" then pause_workers(args)
+              when "r", "resume" then resume_workers(args)
             end
+          end
+        end
+
+        def pause_workers args
+          if args[0].is_a?(String)
+            _detect_worker(args.join(" "), &:pause)
+          else
+            prompt!("Usage: :p(ause) <table_name|--all>", color: :yellow)
+          end
+        end
+
+        def resume_workers args
+          if args[0].is_a?(String)
+            _detect_worker(args.join(" "), &:unpause)
+          else
+            prompt!("Usage: :r(esume) <table_name|--all>", color: :yellow)
           end
         end
 
         def cancel_workers args
           if args[0].is_a?(String)
-            sklaventreiber.sync do
-              if args[0] == "--all"
-                sklaventreiber.workers.each{|w| w.cancel! "canceled by user" }
-              else
-                # find worker
-                wrk = sklaventreiber.workers.detect do |w|
-                  if args[0].start_with?("^")
-                    w.table.match(/#{args[0]}/i)
-                  elsif args[0].start_with?("/")
-                    w.table.match(/#{args[0][1..-1]}/i)
-                  else
-                    w.table == args[0]
-                  end
-                end
-                if wrk
-                  catch(:abort_execution) { wrk.cancel!("canceled by user") }
-                else
-                  prompt!("Could not find any worker by the pattern `#{args[0]}'", color: :red)
-                end
-              end
+            _detect_worker(args.join(" ")) do |wrk|
+              wrk.cancel! "canceled by user"
             end
           else
             prompt!("Usage: :c(cancel) <table_name|--all>", color: :yellow)

@@ -15,6 +15,7 @@ module DbSucker
               # references
               @worker = worker
               @ctn = ctn
+              @thread = Thread.current
 
               # remote & local
               @remote = fd.is_a?(Hash) ? fd.keys[0] : fd
@@ -75,6 +76,10 @@ module DbSucker
               FileUtils.mkdir_p(File.dirname(@local))
             end
 
+            def handle_pause
+              @thread[:paused] ? throughput.pause! : throughput.unpause!
+            end
+
             def execute opts = {}, &block
               opts = opts.reverse_merge(tries: 1, sleep_error: 0)
               try = 1
@@ -103,6 +108,7 @@ module DbSucker
             end
 
             def to_s
+              handle_pause
               return @operror if @operror
               tp = @throughput
 
@@ -151,6 +157,7 @@ module DbSucker
             end
 
             def to_curses target
+              handle_pause
               _this = self
               tp = @throughput
               target.instance_eval do
@@ -182,7 +189,6 @@ module DbSucker
                 when :done
                   if _this.mode == :nofs
                     green "#{_this.entity || _this.label} complete(?): "
-                    yellow " – "
                     cyan "#{human_bytes _this.offset}"
                   else
                     if _this.offset == _this.filesize

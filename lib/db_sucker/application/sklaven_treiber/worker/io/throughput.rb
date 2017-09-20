@@ -94,6 +94,7 @@ module DbSucker
                 @manager = manager
                 @ioop = ioop
                 @monitor = Monitor.new
+                @pauses = 0
                 @categories = [:total]
                 @sopts = { perc_modifier: 1, perc_base: 0 }
                 reset_stats
@@ -122,6 +123,21 @@ module DbSucker
                   ping
                   return unless offset
                   @manager.commit!(offset, @categories)
+                end
+              end
+
+              def pause!
+                sync do
+                  return if @pause_started
+                  @pause_started = Time.current
+                end
+              end
+
+              def unpause!
+                sync do
+                  return unless @pause_started
+                  @pauses += Time.current - @pause_started
+                  @pause_started = false
                 end
               end
 
@@ -156,7 +172,8 @@ module DbSucker
               expose(:done_percentage) { @sopts[:perc_base].to_d + @sopts[:perc_modifier].to_d * (filesize == 0 ? 100 : offset == 0 ? 0 : (offset.to_d / filesize.to_d * 100.to_d)) }
               expose(:remain_percentage) { 100.to_d - done_percentage }
               expose(:bytes_remain) { filesize - offset }
-              expose(:runtime) { @started_at ? (@ended_at || Time.current) - @started_at : 0 }
+              expose(:pauses) { @pauses + (@pause_started ? Time.current - @pause_started : 0) }
+              expose(:runtime) { @started_at ? (@ended_at || Time.current) - @started_at - pauses : 0 }
               expose(:f_byte_progress) { "#{f_offset}/#{f_filesize}" }
 
               [:bps, :bps_avg, :done_percentage, :remain_percentage, :bytes_remain, :offset, :filesize].each do |m|

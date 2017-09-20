@@ -125,6 +125,7 @@ module DbSucker
         # status icon
         case worker.state
           when :pending then gray("⊙")
+          when :pausing, :paused then gray("♨")
           when :aquired then white("⊙")
           when :done then green("✔")
           when :failed then red("✘")
@@ -133,7 +134,7 @@ module DbSucker
         end
 
         # table_name
-        send(worker.should_cancel ? :red : :magenta, " #{worker.table}".ljust(col1 + 1, " "))
+        send(worker.should_cancel ? :red : worker.paused? ? :gray : :magenta, " #{worker.table}".ljust(col1 + 1, " "))
         gray " | "
 
         # status
@@ -170,8 +171,6 @@ module DbSucker
             puts "".tap{|res|
               # status icon
               res << case worker.state
-                when :pending then c("⊙", :black)
-                when :aquired then c("⊙", :white)
                 when :done then c("✔", :green)
                 when :failed then c("✘", :red)
                 when :canceled then c("⊘", :red)

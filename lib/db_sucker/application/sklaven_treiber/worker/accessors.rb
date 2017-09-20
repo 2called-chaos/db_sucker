@@ -31,6 +31,14 @@ module DbSucker
             @state == :running
           end
 
+          def paused?
+            @state == :paused
+          end
+
+          def pausing?
+            @state == :pausing
+          end
+
           def status
             @status
           end

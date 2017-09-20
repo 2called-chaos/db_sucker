@@ -10,6 +10,7 @@ module DbSucker
           def aquire thread
             @thread = thread
             thread[:current_task] = descriptive
+            thread[:current_worker] = self
             if m = thread[:managed_worker]
               debug "Consumer thread ##{m} aquired worker #{descriptive}"
             else
@@ -20,9 +21,48 @@ module DbSucker
             self
           end
 
+          def pause wait = false
+            sync do
+              return if done?
+              return if @state == :pausing || @state == :paused
+              @pause_data = { state_was: @state, signal: @monitor.new_cond }
+              if @state == :pending
+                @state = :paused
+              else
+                @state = :pausing
+                @pause_data[:signal].wait if wait
+              end
+            end
+          end
+
+          def _pausepoint
+            sync do
+              return if !(@state == :pausing || @state == :paused)
+              return unless @pause_data
+              return unless @thread == Thread.current
+              @state = :paused
+              @pause_data[:signal].broadcast
+            end
+            @thread[:paused] = true
+            Thread.stop
+            @thread[:paused] = false
+            _cancelpoint
+          end
+
+          def unpause
+            sync do
+              return if !(@state == :pausing || @state == :paused)
+              return unless @pause_data
+              @state = @pause_data[:state_was]
+              @pause_data = false
+              @thread.wakeup if @thread
+            end
+          end
+
           def cancel! reason = nil, now = false
             return if done?
             @should_cancel = reason || true
+            unpause
             sync { _cancelpoint(reason) if pending? || now }
           end
 
@@ -36,12 +76,15 @@ module DbSucker
               throw :abort_execution, true
               true
             end
+            _pausepoint
           end
 
           def priority
             100 - ({
               running: 50,
               aquired: 50,
+              pausing: 50,
+              paused: 30,
               canceled: 35,
               pending: 30,
               failed: 20,
