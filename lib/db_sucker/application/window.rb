@@ -293,6 +293,7 @@ module DbSucker
                 when :done then c("✔", :green)
                 when :failed then c("✘", :red)
                 when :canceled then c("⊘", :red)
+                else "#{worker.state.inspect}"
               end
               # table
               res << c(" #{worker.table}".ljust(col1 + 1, " "), :magenta) << c(" | ", :black)

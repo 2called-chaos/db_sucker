@@ -25,6 +25,8 @@ module DbSucker
             [["?", %w[h elp]], [], "shows this help"],
             [[%w[q uit]], [], "quit prompt"],
             [["q!", "quit!"], [], "same as ctrl-c"],
+            [["kill"], [], "(dirty) interrupts all workers"],
+            [["kill!"], [], "(dirty) essentially SIGKILL (no cleanup)"],
             [["dump"], [], "create and open coredump"],
             [["eval"], [[:optional, "code"]], "executes code or opens eval prompt (app context, synchronized)"],
             [[%w[c ancel]], [[:mandatory, %w[table_name --all]]], "cancels given or all workers"],
@@ -61,6 +63,8 @@ module DbSucker
               when "c", "cancel" then cancel_workers(args)
               when "q", "quit" then quit_dialog
               when "q!", "quit!" then $core_runtime_exiting = 1
+              when "kill" then kill_workers
+              when "kill!" then kill_app
               when "dump" then dump_core
               when "eval" then args.any? ? _eval(args.join(" ")) : eval_prompt
               when "p", "pause" then pause_workers(args)
@@ -133,6 +137,16 @@ module DbSucker
         def kill_ssh_poll
           return unless sklaventreiber.workers.select{|w| !w.done? || w.sshing }.any?
           sklaventreiber.poll.try(:kill)
+        end
+
+        def kill_workers
+          Thread.list.each do |thr|
+            thr.raise(Interrupt) if thr[:managed_worker]
+          end
+        end
+
+        def kill_app
+          exit!
         end
 
         def dump_core

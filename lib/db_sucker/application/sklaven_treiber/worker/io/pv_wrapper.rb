@@ -62,6 +62,8 @@ module DbSucker
                 @offset = line.to_i
               end
               killer.signal.join
+            ensure
+              killer.kill
             end
           end
         end

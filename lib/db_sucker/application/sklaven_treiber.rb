@@ -188,6 +188,7 @@ module DbSucker
         end
 
         begin
+          Thread.current[:managed_worker] = :main
           _queueoff
         ensure
           ctrlthr[:stop] = true
@@ -202,9 +203,12 @@ module DbSucker
         cnum.times do |wi|
           @status = ["starting consumer #{wi+1}/#{cnum}", "blue"]
           @threads << app.spawn_thread(:sklaventreiber_worker) {|thr|
-            thr[:managed_worker] = wi
-            thr.wait(0.1) until thr[:start] || $core_runtime_exiting
-            _queueoff
+            begin
+              thr[:managed_worker] = wi
+              thr.wait(0.1) until thr[:start] || $core_runtime_exiting
+              _queueoff
+            rescue Interrupt
+            end
           }
         end
 

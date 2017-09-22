@@ -10,6 +10,7 @@ require "ostruct"
 require "optparse"
 require "securerandom"
 require "open3"
+require "shellwords"
 require "net/http"
 
 # 3rd party
