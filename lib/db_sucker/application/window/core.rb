@@ -37,7 +37,7 @@ module DbSucker
         def start_window_loop
           @loop = app.spawn_thread(:window_draw_loop) do |thr|
             loop do
-              break if thr[:stop]
+              break if thr[:stop] && @view == :status
               refresh_screen if app.opts[:window_draw]
               thr.wait(app.opts[:window_refresh_delay])
             end
@@ -114,8 +114,8 @@ module DbSucker
         end
 
         def change_view new_view
+          view_was = @view
           if block_given?
-            view_was = @view
             begin
               @view = new_view
               yield
@@ -124,6 +124,7 @@ module DbSucker
             end
           else
             @view = new_view
+            view_was
           end
         end
 

@@ -41,15 +41,15 @@ module DbSucker
         end
 
         def puts *args
-          sync { @enabled ? (@spool << [:puts, args, Time.current]) : @original.puts(*args) }
+          sync { @enabled ? (@spool << [:puts, args, Time.current]) : @original.send(:puts, *args) }
         end
 
         def print *args
-          sync { @enabled ? (@spool << [:print, args, Time.current]) : @original.print(*args) }
+          sync { @enabled ? (@spool << [:print, args, Time.current]) : @original.send(:print, *args) }
         end
 
         def warn *args
-          sync { @enabled ? (@spool << [:warn, args, Time.current]) : @original.warn(*args) }
+          sync { @enabled ? (@spool << [:warn, args, Time.current]) : @original.send(:warn, *args) }
         end
       end
     end

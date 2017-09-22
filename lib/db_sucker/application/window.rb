@@ -51,49 +51,168 @@ module DbSucker
         Thread.current.wait(1)
       end
 
-      def _view_status
+      def _view_help
+        _render_status(threads: false, started: false, trxid: false, database: false)
+
+        #next_line; next_line
+        #magenta "db_sucker"
+        #blue " #{VERSION}"
+        #yellow " – "
+        #cyan "(C) 2016-#{Time.current.year} Sven Pachnit (bmonkeys.net)"
+
+        #next_line
+        #gray "Released under the MIT license."
+
+        next_line; next_line
+        blue "Key Bindings (case sensitive):"
         next_line
-        yellow "        Status: "
-        send(sklaventreiber.status[1].presence || :blue, sklaventreiber.status[0])
-        # shutdown message
-        if $core_runtime_exiting && sklaventreiber.status[0] != "terminated"
-          red " (HALTING … please wait)"
+
+        Keypad::HELP_INFO[:key_bindings].each do |key, desc|
+          next_line
+          magenta "    #{key}"
+          yellow "  #{desc}"
         end
 
+        next_line; next_line
+        blue "Main prompt commands:"
         next_line
-        yellow "       Threads: "
-        blue "#{Thread.list.length} ".ljust(COL1, " ")
 
-        next_line
-        yellow "       Started: "
-        blue "#{@app.boot}"
-        yellow " ("
-        blue human_seconds(Time.current - app.boot)
-        yellow ")"
+        # only build output once and save it in memory
+        @_view_help_memory ||= begin
+          mchp = Keypad::HELP_INFO[:main_commands].map do |aliases, options, desc|
+            [].tap do |result|
+              result << [].tap{|r|
+                aliases.each do |al|
+                  r << (al.is_a?(Array) ? al.join("").length + 4 : al.length + 2)
+                end
+              }.sum
 
-        next_line
-        yellow "Transaction ID: "
-        cyan sklaventreiber.trxid
+              result << [].tap{|r|
+                options.each do |type, name|
+                  r << (type == :mandatory ? "<#{[*name] * "|"}> " : "[#{[*name] * "|"}] ").length
+                end
+              }.sum
+            end
+          end
+          columns = { aliases: mchp.map(&:first).max, options: mchp.map(&:second).max }
 
-        next_line
-        yellow "      Database: "
-        magenta sklaventreiber.data[:database] || "?"
-        yellow " (transfering "
-        blue "#{sklaventreiber.data[:tables_transfer] || "?"}"
-        yellow " of "
-        blue "#{sklaventreiber.data[:tables_total] || "?"}"
-        yellow " tables)"
+          # render commands
+          [].tap do |instruct|
+            Keypad::HELP_INFO[:main_commands].each do |aliases, options, desc|
+              # aliases
+              instruct << [:next_line]
+              instruct << [:addstr, "    "]
+              cl = 0
+              aliases.each do |al|
+                instruct << [:magenta, ":"]
+                if al.is_a?(Array)
+                  instruct << [:blue, "#{al[0]}"]
+                  instruct << [:gray, "("]
+                  instruct << [:cyan, "#{al[1]}"]
+                  cl += al.join("").length + 4
+                  instruct << [:gray, ") "]
+                else
+                  cl += al.length + 2
+                  instruct << [:blue, "#{al} "]
+                end
+              end
+              instruct << [:addstr, "".ljust(columns[:aliases] - cl, " ")]
 
-        next_line
-        total, done = sklaventreiber.data[:tables_transfer], sklaventreiber.data[:tables_done]
-        perc = total && done ? f_percentage(done, total) : "?"
-        yellow "      Progress: "
-        green perc
-        yellow " – "
-        blue "#{done}/#{total || "?"} workers done"
+              # options
+              cl = 0
+              instruct << [:addstr, " "]
+              options.each do |type, name|
+                if type == :mandatory
+                  instruct << [:red, "<"]
+                  [*name].each_with_index do |n, i|
+                    instruct << [:gray, "|"] if i > 0
+                    instruct << [:blue, n]
+                  end
+                  instruct << [:red, "> "]
+                else
+                  instruct << [:yellow, "["]
+                  [*name].each_with_index do |n, i|
+                    instruct << [:gray, "|"] if i > 0
+                    instruct << [:cyan, n]
+                  end
+                  instruct << [:yellow, "] "]
+                end
+                cl += [*name].join("").length + 3 + [*name].length - 1
+              end
+              instruct << [:addstr, "".ljust(columns[:options] - cl, " ")]
 
+              instruct << [:yellow, " #{desc}"]
+            end
+          end
+        end
+
+        @_view_help_memory.each do |a|
+          send(*a)
+        end
+
+        @keypad.prompt.render(self, lines-1)
+      end
+
+      def _view_status
+        _render_status
         _render_workers
         @keypad.prompt.render(self, lines-1)
+      end
+
+      def _render_status opts = {}
+        opts = opts.reverse_merge(status: true, threads: true, started: true, trxid: true, database: true, progress: true)
+
+        if opts[:status]
+          next_line
+          yellow "        Status: "
+          send(sklaventreiber.status[1].presence || :blue, sklaventreiber.status[0])
+          # shutdown message
+          if $core_runtime_exiting && sklaventreiber.status[0] != "terminated"
+            red " (HALTING … please wait)"
+          end
+        end
+
+        if opts[:threads]
+          next_line
+          yellow "       Threads: "
+          blue "#{Thread.list.length} ".ljust(COL1, " ")
+        end
+
+        if opts[:started]
+          next_line
+          yellow "       Started: "
+          blue "#{@app.boot}"
+          yellow " ("
+          blue human_seconds(Time.current - app.boot)
+          yellow ")"
+        end
+
+        if opts[:trxid]
+          next_line
+          yellow "Transaction ID: "
+          cyan sklaventreiber.trxid
+        end
+
+        if opts[:database]
+          next_line
+          yellow "      Database: "
+          magenta sklaventreiber.data[:database] || "?"
+          yellow " (transfering "
+          blue "#{sklaventreiber.data[:tables_transfer] || "?"}"
+          yellow " of "
+          blue "#{sklaventreiber.data[:tables_total] || "?"}"
+          yellow " tables)"
+        end
+
+        if opts[:progress]
+          next_line
+          total, done = sklaventreiber.data[:tables_transfer], sklaventreiber.data[:tables_done]
+          perc = total && done ? f_percentage(done, total) : "?"
+          yellow "      Progress: "
+          green perc
+          yellow " – "
+          blue "#{done}/#{total || "?"} workers done"
+        end
       end
 
       def _render_workers

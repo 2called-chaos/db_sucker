@@ -32,10 +32,11 @@ module DbSucker
           @opts = {
             color: :blue,
             return_on_buffer: false,
-            return_on_enter: true,
+            capture_enter: true,
+            capture_escape: true,
             has_cursor: true,
-            reset_on_escape: true,
             prompt: nil, # proc
+            cursor_visible: true,
           }
         end
 
@@ -44,7 +45,7 @@ module DbSucker
           @callback = callback
           @active = true
           @opts = @opts.merge(opts)
-          @window.set_cursor(2)
+          @window.set_cursor(@opts[:cursor_visible] ? 2 : 0)
           @keypad.app.fire(:prompt_start, @label)
         end
 
@@ -67,12 +68,12 @@ module DbSucker
 
         def handle_input ch
           case ch
-            when 27 then (@opts[:reset_on_escape] ? _escape : sbuf(ch))
+            when 27 then (@opts[:capture_escape] ? _escape : sbuf(ch))
             when 127 then (@opts[:has_cursor] ? _backspace : sbuf(ch))
             when 330 then (@opts[:has_cursor] ? _delete : sbuf(ch))
             when 260 then (@opts[:has_cursor] ? _left_arrow : sbuf(ch))
             when 261 then (@opts[:has_cursor] ? _right_arrow : sbuf(ch))
-            when 13 then (@opts[:return_on_enter] ? _enter : sbuf(ch))
+            when 13 then (@opts[:capture_enter] ? _enter : sbuf(ch))
             else sbuf(ch)
           end
         end

@@ -2,7 +2,8 @@ module DbSucker
   class Application
     class Window
       class Keypad
-        attr_reader :prompt, :keyloop
+        include Core
+        attr_reader :prompt, :keyloop, :window
 
         def initialize window
           @window = window
@@ -10,45 +11,27 @@ module DbSucker
           @monitor = Monitor.new
         end
 
-        def sync &block
-          @monitor.synchronize(&block)
-        end
-
-        def sklaventreiber
-          @window.sklaventreiber
-        end
-
-        def app
-          @window.app
-        end
-
-        def enabled?
-          app.opts[:window_keypad]
-        end
-
-        def start_loop
-          return false unless enabled?
-          @keyloop = app.spawn_thread(:window_keypad_loop) do |thr|
-            loop {
-              begin
-                handle_input(@window.send(:getch))
-              rescue StandardError => ex
-                app.notify_exception("DbSucker::Window::Keypad encountered an input handle error on tick ##{@window.tick}", ex)
-              end
-            }
-          end
-        end
-
-        def stop_loop
-          return unless @keyloop
-          sync { @keyloop.kill }
-          @keyloop.join
-        end
-
-        def prompt! *a, &b
-          return false unless enabled?
-          @prompt.set!(*a, &b)
-        end
+        HELP_INFO = {
+          key_bindings: [
+            ["?", "shows this help"],
+            ["^", "eval prompt (app context, synchronized)"],
+            ["P", "kill SSH polling (if it stucks)"],
+            ["T", "create core dump and open in editor"],
+            ["q", "quit prompt"],
+            ["Q", "same as ctrl-c"],
+            [":", "main prompt"],
+          ],
+          main_commands: [
+            [["?", %w[h elp]], [], "shows this help"],
+            [[%w[q uit]], [], "quit prompt"],
+            [["q!", "quit!"], [], "same as ctrl-c"],
+            [["dump"], [], "create and open coredump"],
+            [["eval"], [[:optional, "code"]], "executes code or opens eval prompt (app context, synchronized)"],
+            [[%w[c ancel]], [[:mandatory, %w[table_name --all]]], "cancels given or all workers"],
+            [[%w[p ause]], [[:mandatory, %w[table_name --all]]], "pauses given or all workers"],
+            [[%w[r esume]], [[:mandatory, %w[table_name --all]]], "resumes given or all workers"],
+          ],
+        }
 
         def handle_input ch
           sync do
@@ -68,38 +51,20 @@ module DbSucker
           end
         end
 
-        def _eval evil
-          return if evil.blank?
-          app.dump_file "eval-result", true do |f|
-            begin
-              f.puts("#{evil}\n\n")
-              f.puts(app.sync{ app.instance_eval(evil) })
-            rescue StandardError => ex
-              f.puts("#{ex.class}: #{ex.message}")
-              ex.backtrace.each {|l| f.puts("  #{l}") }
-            end
-          end
-        end
-
-        def _detect_worker arg, &block
-          sklaventreiber.sync do
-            if arg == "--all"
-              sklaventreiber.workers.each{|w| block.call(w) }
-            else
-              wrk = sklaventreiber.workers.detect do |w|
-                if arg.start_with?("^")
-                  w.table.match(/#{arg}/i)
-                elsif arg.start_with?("/")
-                  w.table.match(/#{arg[1..-1]}/i)
-                else
-                  w.table == arg
-                end
-              end
-              if wrk
-                block.call(wrk)
-              else
-                prompt!("Could not find any worker by the pattern `#{args[0]}'", color: :red)
-              end
+        def main_prompt
+          prompt!(":") do |raw|
+            break if raw.blank?
+            args = raw.split(" ")
+            cmd = args.shift
+            case cmd
+              when "?", "h", "help" then show_help
+              when "c", "cancel" then cancel_workers(args)
+              when "q", "quit" then quit_dialog
+              when "q!", "quit!" then $core_runtime_exiting = 1
+              when "dump" then dump_core
+              when "eval" then args.any? ? _eval(args.join(" ")) : eval_prompt
+              when "p", "pause" then pause_workers(args)
+              when "r", "resume" then resume_workers(args)
             end
           end
         end
@@ -114,7 +79,12 @@ module DbSucker
             blue q
             gray " [y/q/t/1 n/f/0] "
           end
-          prompt!(q, prompt: p, return_on_buffer: true, return_on_enter: false, has_cursor: false) do |response|
+          prompt!(q,
+            prompt: p,
+            return_on_buffer: true,
+            capture_enter: false,
+            has_cursor: false
+          ) do |response|
             if response == "q" || @window.strbool(response) == true
               $core_runtime_exiting = 1
             end
@@ -122,23 +92,15 @@ module DbSucker
         end
 
         def show_help
-
-        end
-
-        def main_prompt
-          prompt!(":") do |raw|
-            break if raw.blank?
-            args = raw.split(" ")
-            cmd = args.shift
-            case cmd
-              when "c", "cancel" then cancel_workers(args)
-              when "q", "quit" then quit_dialog
-              when "q!", "quit!" then $core_runtime_exiting = 1
-              when "dump" then dump_core
-              when "eval" then args.any? ? _eval(args.join(" ")) : eval_prompt
-              when "p", "pause" then pause_workers(args)
-              when "r", "resume" then resume_workers(args)
-            end
+          view_was = window.change_view(:help)
+          prompt!("[press any key to return]",
+            return_on_buffer: true,
+            capture_enter: false,
+            has_cursor: false,
+            capture_escape: false,
+            cursor_visible: false
+          ) do |response|
+            window.change_view(view_was)
           end
         end
 
