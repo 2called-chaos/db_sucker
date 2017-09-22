@@ -44,6 +44,65 @@ module DbSucker
 
       # ----------------------------------------------------------------------
 
+      # ====================
+      # = Dev/Test actions =
+      # ====================
+
+      # via -a/--action cloop
+      def dispatch_cloop
+        begin
+          trap_signals
+          @sklaventreiber = SklavenTreiber.new(self, uniqid)
+          @sklaventreiber.spooled do
+            @opts[:stdout].disable
+            hook(:prompt_start) { @opts[:stdout].enable }
+            hook(:prompt_stop) { @opts[:stdout].disable(true) }
+            begin
+              @sklaventreiber._init_window
+              loop do
+                break if $core_runtime_exiting
+                sleep 0.1
+              end
+            ensure
+              sandboxed { @sklaventreiber.window.try(:stop) }
+            end
+          end
+        ensure
+          release_signals
+        end
+      end
+
+      # via -a/--action console
+      def dispatch_console
+        configful_dispatch(ARGV.shift, ARGV.shift) do |identifier, ctn, variation, var|
+          begin ; require "pry" ; rescue LoadError ; end
+          ::Kernel.binding.pry
+        end
+      end
+
+      # via -a/--action threadtest
+      def dispatch_threadtest
+        t = Thread.new { Thread.stop }
+        i, m = 1, [0, nil, nil]
+        while i < 3
+          m[0] += i == 1 ? -1 : 1
+          t.priority = m[0]
+          if t.priority != m[0]
+            m[i] = t.priority
+            m[0] = 0
+            i += 1
+          end
+        end
+        t.kill
+        puts "Thread priority: -#{m[1].abs}..+#{m[2].abs}"
+      end
+
+
+      # ================
+      # = Main actions =
+      # ================
+
+      # via -h/--help
       def dispatch_help
         colorized_help = @optparse.to_s.split("\n").map do |l|
           if l.start_with?("Usage:")
@@ -61,6 +120,7 @@ module DbSucker
         puts c("The current config directory is #{c core_cfg_path.to_s, :magenta}"), nil
       end
 
+      # via -v/--version
       def dispatch_info
         your_version = Gem::Version.new(DbSucker::VERSION)
         puts c ""
@@ -99,6 +159,7 @@ module DbSucker
         puts c ""
       end
 
+      # helper for #dispatch_stat_tmp
       def _dispatch_stat_tmp_display files, directories, managed, cleanup = false, sftp = false
         log "Directories: #{c directories.count, :blue}"
         log "      Files: #{c files.count, :blue} #{c "("}#{c managed.count, :blue}#{c " managed)"}"
@@ -127,6 +188,7 @@ module DbSucker
         end
       end
 
+      # via --stat-tmp
       def dispatch_stat_tmp cleanup = false
         configful_dispatch(ARGV.shift, ARGV.shift) do |identifier, ctn, variation, var|
           if ctn
@@ -160,10 +222,12 @@ module DbSucker
         end
       end
 
+      # via --cleanup-tmp
       def dispatch_cleanup_tmp
         dispatch_stat_tmp(true)
       end
 
+      # via -l/--list-databases
       def _list_databases identifier, ctn, variation, var
         return unless opts[:list_databases]
         log "Listing databases for identifier #{c identifier, :magenta}#{c "..."}"
@@ -172,12 +236,14 @@ module DbSucker
         throw :dispatch_handled
       end
 
+      # via -t/--list-tables
       def _list_tables identifier, ctn, variation, var
         return if !(opts[:list_tables].present? && opts[:list_tables] != :all)
         print_db_table_list ctn.hostname, [[opts[:list_tables], ctn.table_list(opts[:list_tables])]]
         throw :dispatch_handled
       end
 
+      # default action if variation given
       def _suck_variation identifier, ctn, variation, var
         if ctn && (var || (@opts[:suck_only].any? || @opts[:suck_except].any?))
           var ||= ctn.variation("default")
@@ -194,10 +260,12 @@ module DbSucker
         end
       end
 
+      # default action if no variation is given
       def _default_listing identifier, ctn, variation, var
         db_table_listing(ctn ? [[identifier, ctn]] : cfg)
       end
 
+      # default actions in order
       def dispatch_index
         configful_dispatch(ARGV.shift, ARGV.shift) do |identifier, ctn, variation, var|
           catch :dispatch_handled do
