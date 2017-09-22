@@ -96,7 +96,9 @@ module DbSucker
                 @monitor = Monitor.new
                 @pauses = 0
                 @categories = [:total]
-                @sopts = { perc_modifier: 1, perc_base: 0 }
+                @tracking = []
+                @tracking_offset = 0
+                @sopts = { perc_modifier: 1, perc_base: 0, tracking: 5.seconds }
                 reset_stats
               end
 
@@ -147,8 +149,16 @@ module DbSucker
                   @stats[:bps_avg] = runtime.zero? ? 0 : (offset.to_d / runtime.to_d).to_i
                   @stats[:eta2] = @stats[:bps_avg].zero? ? -1 : (bytes_remain.to_d / @stats[:bps_avg].to_d).to_i
 
-                  @stats[:bps] = @stats[:bps_avg]
-                  @stats[:eta] = @stats[:eta2]
+                  # eta tracking
+                  od = @tracking.last ? offset - @tracking_offset - @tracking.sum{|t,o| o }.to_d : 0
+                  @tracking << [Time.current, od] if !od.zero? || @tracking.empty?
+                  while @tracking.any? && @tracking.first[0] < @sopts[:tracking].ago
+                    @tracking_offset += @tracking.shift[1]
+                  end
+
+                  range = @tracking.any? ? @tracking.last[0] - @tracking.first[0] : 0
+                  @stats[:bps] = range.zero? ? 0 : @tracking.sum{|t,o| o }.to_d / range.to_d
+                  @stats[:eta] = @stats[:bps].zero? ? -1 : (bytes_remain.to_d / @stats[:bps].to_d).to_i
                 end
               end
 
@@ -158,6 +168,8 @@ module DbSucker
 
               def reset_stats
                 sync do
+                  @tracking_offset = 0
+                  @tracking.clear
                   @stats = { eta: -1, eta2: -1, bps: 0, bps_avg: 0 }
                 end
               end
