@@ -9,6 +9,7 @@
   * Note that the SequelImporter has been temporarily removed since I need to work on it some more.
   * Added integrity checking (checksum checking of transmitted files)
   * Added a lot of status displays
+  * Added a vim-like command interface (press : and then a command, e.g. ":?"+enter but actually you could just press ?)
   * Configurations haven't changed *except*
     * an "adapter" option is now mandatory on both source and variations.
     * gzip option has been removed, if your "file" option ends with ".gz" we assume gzip

@@ -1,27 +1,32 @@
+# This is the example configuration and contains all settings available and serves also
+# as documentation. All settings that are commented out are default values, all other
+# values should be changed according to you environment but you can still remove some
+# of those (e.g. SSH has a few defaults like username, keyfile, etc.).
+
 my_identifier:
-  # definition of the remote
+  # Source contains all information regarding the remote host and database
   source:
     ssh:
       hostname: my.server.net
 
-      # If left blank use username of current logged in user (SSH default behaviour)
+      ## If left blank use username of current logged in user (SSH default behaviour)
       username: my_dump_user
 
-      # If you login via password you must declare it here (prompt will break).
-      # Consider using key authentication and leave the password blank.
+      ## If you login via password you must declare it here (prompt will break).
+      ## Consider using key authentication and leave the password blank/remove it.
       password: my_secret
 
-      # Can be a string or an array of strings.
-      # Can be absolute or relative to the _location of this file_ (or start with ~)
-      # If left blank Net::SSH will attempt to use your ~/.ssh/id_rsa automatically.
-      keyfile: ~/.ssh/id_rsa
+      ## Can be a string or an array of strings.
+      ## Can be absolute or relative to the _location of this file_ (or start with ~)
+      ## If left blank Net::SSH will attempt to use your ~/.ssh/id_rsa automatically.
+      #keyfile: ~/.ssh/id_rsa
 
-      # The remote temp directory to place dumpfiles in. Must be writable by the
-      # SSH user and should be exclusively used for this tool though cleanup only
-      # removes .dbsc files. The directory must exist!
+      ## The remote temp directory to place dumpfiles in. Must be writable by the
+      ## SSH user and should be exclusively used for this tool though cleanup only
+      ## removes .dbsc files. The directory MUST EXIST!
       tmp_location: /home/my_dump_user/db_sucker_tmp
 
-    # Remote database settings. DON'T limit tables via arguments!
+    ## Remote database settings. DON'T limit tables via arguments!
     adapter: mysql2 # only mysql is supported at the moment
     hostname: 127.0.0.1
     username: my_dump_user
@@ -29,22 +34,22 @@ my_identifier:
     database: my_database
     args: --single-transaction # for innoDB
 
-    # Binaries to be used (normally there is no need to change these)
-    client_binary: mysql # used to query remote server
-    dump_binary: mysqldump # used to dump on remote server
-    gzip_binary: gzip # used to compress file on remote server
+    ## Binaries to be used (normally there is no need to change these)
+    #client_binary: mysql # used to query remote server
+    #dump_binary: mysqldump # used to dump on remote server
+    #gzip_binary: gzip # used to compress file on remote server
 
-    # SHA type to use for file integrity checking, can be set to "off" to disable feature.
-    # should obviously be the same (algorithm) as your variation.
-    integrity_sha: 512
+    ## SHA type to use for file integrity checking, can be set to "off" to disable feature.
+    ## Should obviously be the same (algorithm) as your variation.
+    #integrity_sha: 512
 
-    # binary to generate integrity hashes.
-    # Note: The sha type (e.g. 1, 128, 512) will be appended!
-    integrity_binary: shasum -ba
+    ## Binary to generate integrity hashes.
+    ## Note: The sha type (e.g. 1, 128, 512) will be appended!
+    #integrity_binary: shasum -ba
 
-  # define as many variations here as you want.
+  # Define as many variations here as you want. It is recommended that you always have a "default" variation.
   variations:
-    # define your local database settings, args will be passed to the `mysql` command for import.
+    # Define your local database settings, args will be passed to the `mysql` command for import.
     default:
       adapter: mysql2 # only mysql is supported at the moment
       database: tomatic
@@ -52,23 +57,26 @@ my_identifier:
       username: root
       password:
       args:
-      client_binary: mysql # used to query/import locally
+      #client_binary: mysql # used to query/import locally
 
-    # you can inherit all settings from another variation with the `base` setting.
+    # You can inherit all settings from another variation with the `base` setting.
+    # Warning/Note: If you base from a variation that also has a `base` setting it will be resolved,
+    #               be aware of infinite loops, the app won't handle it. If you have a loop the app
+    #               will die with "stack level too deep (SystemStackError)"
     quick:
-      base: default
+      base: default # <-- copy all settings from $base variation
       label: "This goes quick, I promise"
       only: [this_table, and_that_table]
 
-    # you can use `only` or `except` to limit the tables you want to suck but not both at the same time.
-    # there is also an option `ignore_always` for tables which you never want to pull (intended for base variation)
-    # so that you don't need to repeat them in your except statements (which overwrites, no merge here)
+    # You can use `only` or `except` to limit the tables you want to suck but not both at the same time.
+    # There is also an option `ignore_always` for tables which you never want to pull (intended for your default variation)
+    # so that you don't need to repeat them in your except statements (which overwrites your base, no merge)
     unheavy:
       base: default
       except: [orders, order_items, activities]
       ignore_always: [schema_migrations]
 
-    # You can also copy the downloaded files to a separate directory (this is not a backup!)
+    # You can also copy the downloaded files to a separate directory (this is not a proper backup!?)
     # - If database is also given perform both operations.
     # - If file suffix is ".gz" gzip file will be copied, otherwise we copy raw SQL file
     # - Path will be created in case it doesn't exist (mkdir -p).
@@ -81,10 +89,9 @@ my_identifier:
     #    :combined   :datetime_-_:table
     with_copy:
       base: default
-      file: ~/Desktop/:date_:id_:table.sql.gz
-      gzip: true
+      file: ~/Desktop/:date_:id_:table.sql.gz # if you would want to store raw SQL omit the ".gz"
 
-    # only save files, don't import
+    # Only save files, don't import
     only_copy:
       base: with_copy
       database: false
@@ -108,10 +115,12 @@ my_identifier:
     #     - you can have different columns as long as all remote columns exist locally
     #     - import will be performed by a ruby implementation (using Sequel)
     #     - import will ignore records that violate indices (or duplicate IDs)
+    #     - *implied* this will only ADD records, it won't update nor delete existing records!
     recent_orders:
       base: default
       only: [orders, order_items]
       constraints:
+        # this is some YAML magic (basically a variable)
         last_week: &last_week "created_at > date_sub(now(), INTERVAL 7 DAY)"
         orders: *last_week
         order_items: *last_week
@@ -126,7 +135,7 @@ my_identifier:
     #
     # WARNING:
     #   - you will get weird data constellations if you create some data locally and then apply a "delta"
-    #   - records removed on the remote will still be there locally
+    #   - records removed on the remote will still be there locally and existing records won't get updated
     #   - this is just for the lazy and impatient of us!
     eeekkksss:
       base: default

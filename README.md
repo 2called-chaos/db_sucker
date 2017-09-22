@@ -177,6 +177,7 @@ Currently there are two (well three) importers to choose from.
 * Under certain conditions the program might softlock when the remote unexpectedly closes the SSH connection or stops responding to it (bad packet error). The same might happen when the remote denies a new connection (e.g. to many connections). Since the INT signal is trapped you must kill the process. If you did kill it make sure to run the cleanup task to get rid of potentially big dump files.
   The issue is that I cannot download multiple files over the same connection at the same time. Until I figured it out there are typically
   2 connections + 1 for each download. With (atm hardcoded) 20 workers you will reach, with one process of db_sucker, 22 connections in the worst case.
+* Ruby 2.3.0 has a bug that might segfault your ruby if some exceptions occur, this is fixed since 2.3.1 and later
 
 
 ## Todo

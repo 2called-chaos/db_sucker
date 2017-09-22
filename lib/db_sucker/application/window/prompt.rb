@@ -45,8 +45,8 @@ module DbSucker
           @callback = callback
           @active = true
           @opts = @opts.merge(opts)
+          @keypad.app.fire(:prompt_start, @label, @opts)
           @window.set_cursor(@opts[:cursor_visible] ? 2 : 0)
-          @keypad.app.fire(:prompt_start, @label)
         end
 
         def render target, line
