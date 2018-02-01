@@ -36,7 +36,12 @@ module DbSucker
           end
         ensure
           app.fire(:core_shutdown)
-          app.debug "#{Thread.list.length} threads remain..."
+          remain = Thread.list.length
+          if remain > 1
+            app.warning "#{Thread.list.length} threads remain (should be 1)..."
+          else
+            app.debug "1 thread remains..."
+          end
           Thread.main[:app] = nil
         end
       end
