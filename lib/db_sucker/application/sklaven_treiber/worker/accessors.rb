@@ -39,6 +39,10 @@ module DbSucker
             @state == :pausing
           end
 
+          def deferred?
+            @deferred
+          end
+
           def status
             @status
           end

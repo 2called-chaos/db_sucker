@@ -79,6 +79,14 @@ module DbSucker
             end
           end
 
+          def wait_defer_ready label = nil
+            channel = app.fake_channel {|c| c[:slot_pool_qindex].call.zero? || @should_cancel }
+            channel[:slot_pool_qindex] = Proc.new { sklaventreiber.sync { sklaventreiber.workers.count{|w| !w.done? && !w.deferred? } } }
+
+            label = "deferred import: #{human_bytes(File.size(@local_file_raw))} raw SQL :slot_pool_qindex(– waiting for %s workers )(:seconds)"
+            second_progress(channel, label, :blue).join
+          end
+
           def second_progress channel, status, color = :yellow
             target_thread = Thread.current
             app.spawn_thread(:sklaventreiber_worker_second_progress) do |thr|

@@ -20,6 +20,7 @@ module DbSucker
           @table = table
           @monitor = Monitor.new
           @timings = {}
+          @deferred = false
           @spinner_frames = sklaventreiber.window.try(:spinner_frames).try(:dup) || []
           @perform = %w[].tap do |perform|
             perform << "r_dump_file"
@@ -33,7 +34,7 @@ module DbSucker
               perform << "l_decompress_file"
               perform << "l_verify_raw_hash" if ctn.integrity?
               perform << "l_copy_file" if var.copies_file? && !var.copies_file_compressed?
-              # perform << "l_import_file" if var.data["database"]
+              perform << "l_import_file" if var.data["database"]
             end
           end
 

@@ -55,32 +55,33 @@ module DbSucker
       @output_monitor = Monitor.new
       @cfg = ContainerCollection.new(self)
       @opts = {
-        dispatch: :index,        # (internal) action to dispatch
-        mode: :default,          # (internal) mode for action
-        check_for_updates: true, # -z flag
-        colorize: true,          # --monochrome flag
-        debug: false,            # -d flag
-        stdout: STDOUT,          # (internal) STDOUT redirect
-        pipein: ARGF,            # (internal) INPUT redirect
+        dispatch: :index,                # (internal) action to dispatch
+        mode: :default,                  # (internal) mode for action
+        check_for_updates: true,         # -z flag
+        colorize: true,                  # --monochrome flag
+        debug: false,                    # -d flag
+        stdout: STDOUT,                  # (internal) STDOUT redirect
+        pipein: ARGF,                    # (internal) INPUT redirect
 
-        list_databases: false,   # --list-databases flag
-        list_tables: false,      # --list-tables flag
-        suck_only: [],           # --only flag
-        suck_except: [],         # --except flag
-        simulate: false,         # --simulate flag
-        deferred_import: true,   # -n flag
+        list_databases: false,           # --list-databases flag
+        list_tables: false,              # --list-tables flag
+        suck_only: [],                   # --only flag
+        suck_except: [],                 # --except flag
+        simulate: false,                 # --simulate flag
+        deferred_import: true,           # -n flag
+        deferred_threshold: 50_000_000,  # 50 MB
 
         # features
-        status_format: :full,    # used for IO operations, can be one of: none, minimal, full
-        pv_enabled: true,        # disable pv utility autodiscovery (force non-usage)
+        status_format: :full,            # used for IO operations, can be one of: none, minimal, full
+        pv_enabled: true,                # disable pv utility autodiscovery (force non-usage)
 
         # sklaven treiber
-        window_enabled: true, # if disabled effectively disables any status progress or window drawing
-        window_draw: true, # wether to refresh screen or not
-        window_refresh_delay: 0.25, # refresh screen every so many seconds
-        window_keypad: true, # allow keyboard controls
+        window_enabled: true,            # if disabled effectively disables any status progress or window drawing
+        window_draw: true,               # wether to refresh screen or not
+        window_refresh_delay: 0.25,      # refresh screen every so many seconds
+        window_keypad: true,             # allow keyboard controls
         window_spinner: :circle_quarter, # change spinner... why is this configurable?
-        consumers: 10, # amount of workers to run at the same time
+        consumers: 10,                   # amount of workers to run at the same time
 
         # thread priorities (-3..+3)
         tp_window_draw_loop: -3,
