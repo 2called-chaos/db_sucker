@@ -78,7 +78,7 @@ module DbSucker
 
             def unregister instance
               sync do
-                @instances.each do |k, v|
+                @instances.clone.each do |k, v|
                   if v == instance
                     @instances.delete(k)
                     break

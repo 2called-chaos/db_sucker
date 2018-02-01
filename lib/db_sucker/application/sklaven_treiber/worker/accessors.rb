@@ -63,6 +63,10 @@ module DbSucker
             "#{trxid}_table"
           end
 
+          def to_s
+            "#<#{self.class}:#{self.object_id}-#{descriptive}(#{@state})>"
+          end
+
           def tmp_filename tmp_suffix = false
             "#{ctn.tmp_path}/#{trxid}_#{ctn.source["database"]}_#{table}.dbsc#{".tmp" if tmp_suffix}"
           end

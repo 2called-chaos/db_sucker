@@ -60,7 +60,7 @@ module DbSucker
                 if wrk
                   block.call(wrk)
                 else
-                  prompt!("Could not find any worker by the pattern `#{args[0]}'", color: :red)
+                  prompt!("Could not find any worker by the pattern `#{arg}'", color: :red)
                 end
               end
             end

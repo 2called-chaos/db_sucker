@@ -34,14 +34,15 @@ module DbSucker
       def pv_utility
         app.sync do
           if @_pv_utility.nil?
-            ssh_start(true) do |ssh|
-              res = blocking_channel_result("which pv && pv --version", ssh: ssh)
+            if app.opts[:pv_enabled]
+              res = blocking_channel_result("which pv && pv --version")
+              app.debug "#{Time.current.to_f}: #{res.to_a.inspect}"
               if m = res[1].to_s.match(/pv\s([0-9\.]+)\s/i)
                 if Gem::Version.new(m[1]) >= Gem::Version.new("1.3.8")
                   @_pv_utility = res[0].strip.presence
                 end
               end
-            end if app.opts[:pv_enabled]
+            end
             @_pv_utility = false unless @_pv_utility
           end
           @_pv_utility

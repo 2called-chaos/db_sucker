@@ -108,7 +108,7 @@ module DbSucker
                 _cancelpoint
                 @step = i + 1
                 r = catch(:abort_execution) {
-                  aquire_slots(*app.opts[:routine_pools][m[1..-1]]) do
+                  aquire_slots(*app.opts[:routine_pools][m.to_sym]) do
                     begin
                       r0 = Time.current
                       app.fire(:worker_routine_before, self, current_perform)
@@ -130,6 +130,8 @@ module DbSucker
             @status = ["FAILED(#{current_perform}) #{ex.class}: #{ex.message}", "red"]
             @state = :failed
             Thread.main[:app].notify_exception("SklavenTreiber::Worker encountered an error in `#{current_perform}' (ctn: #{ctn.name}, var: #{var.name}, db: #{ctn.source["database"]}, table: #{table})", ex)
+          rescue Interrupt => ex
+            @state = :failed
           ensure
             # cleanup temp files
             ctn.sftp_start do |sftp|

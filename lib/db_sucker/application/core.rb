@@ -35,6 +35,7 @@ module DbSucker
           Thread.list.each do |thr|
             f.puts "#{thr.inspect}"
             f.puts "      iType: #{thr == Thread.main ? :main_thread : thr[:itype] || :uncategorized}"
+            f.puts "    Aborts?: #{thr.abort_on_exception}"
             f.puts "   Priority: #{thr.priority}"
             f.puts "     T-Vars: #{thr.thread_variables.inspect}"
             thr.thread_variables.each {|k| f.puts "             #{k} => #{thr.thread_variable(k)}" }
