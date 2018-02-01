@@ -10,15 +10,15 @@ module DbSucker
       end
 
       def puts *a
-        sync { @opts[:stdout].send(:puts, *a) }
+        outsync { @opts[:stdout].send(:puts, *a) }
       end
 
       def print *a
-        sync { @opts[:stdout].send(:print, *a) }
+        outsync { @opts[:stdout].send(:print, *a) }
       end
 
       def warn *a
-        sync { @opts[:stdout].send(:warn, *a) }
+        outsync { @opts[:stdout].send(:warn, *a) }
       end
 
       def debug msg, lvl = 1

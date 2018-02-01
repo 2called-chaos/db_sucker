@@ -52,6 +52,7 @@ module DbSucker
       @env, @argv = env, argv
       @hooks = {}
       @monitor = Monitor.new
+      @output_monitor = Monitor.new
       @cfg = ContainerCollection.new(self)
       @opts = {
         dispatch: :index,        # (internal) action to dispatch

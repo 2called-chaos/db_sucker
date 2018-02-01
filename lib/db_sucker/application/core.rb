@@ -60,6 +60,10 @@ module DbSucker
         @monitor.synchronize(&block)
       end
 
+      def outsync &block
+        @output_monitor.synchronize(&block)
+      end
+
       def uniqid
         Digest::SHA1.hexdigest(SecureRandom.urlsafe_base64(128))
       end
