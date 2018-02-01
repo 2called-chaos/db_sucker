@@ -57,12 +57,14 @@ module DbSucker
       def whip_it! ctn, var
         @ctn, @var = ctn, var
 
+        _start_ssh_poll
         _init_window
         _check_remote_tmp_directory
         _select_tables
         _initialize_slot_pools
         _initialize_workers
-        _start_ssh_poll
+        @ctn.pv_utility # lazy load
+        @poll[:force] = false
         @throughput.start_loop
 
         @sleep_before_exit = 3 if @window
@@ -74,7 +76,10 @@ module DbSucker
         end
         app.sandboxed do
           @status = ["terminating (SSH poll)", "red"]
-          @poll.try(:join)
+          if @poll
+            @poll[:force] = false
+            @poll.join
+          end
         end
         @status = ["terminated", "red"]
         sleep @sleep_before_exit
@@ -155,14 +160,32 @@ module DbSucker
       end
 
       def _start_ssh_poll
+        wait_lock = Queue.new
         @poll = app.spawn_thread(:sklaventreiber_ssh_poll) do |thr|
+          thr[:force] = true
           thr[:iteration] = 0
-          @ctn.loop_ssh(0.1) {
-            thr[:iteration] += 1
-            thr[:last_iteration] = Time.current
-            @workers.select{|w| !w.done? || w.sshing }.any?
-          }
+          thr[:errors] = 0
+          wait_lock << true
+          begin
+            @ctn.loop_ssh(0.1) {
+              thr[:iteration] += 1
+              thr[:last_iteration] = Time.current
+              thr[:force] || @workers.select{|w| !w.done? || w.sshing }.any?
+            }
+          rescue Container::SSH::ChannelOpenFailedError
+            thr[:errors] += 1
+            sleep 0.5
+            retry
+          end
+
+          if thr[:errors] > 25
+            app.warning "SSH error count (#{thr[:errors]}) is high! Verify remote MaxSessions setting or lower concurrent worker count."
+          else
+            app.debug "SSH error count (#{thr[:errors]})"
+          end
         end
+        wait_lock.pop
+        sleep 0.01 until @poll[:iteration] && @poll[:iteration] > 0
       end
 
       def _run_consumers

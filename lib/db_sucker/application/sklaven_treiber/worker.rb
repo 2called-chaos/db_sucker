@@ -3,6 +3,7 @@ module DbSucker
     class SklavenTreiber
       class Worker
         SlotPoolNotInitializedError = Class.new(::RuntimeError)
+        ChannelFailRetryError = Class.new(::RuntimeError)
 
         include Core
         include Accessors

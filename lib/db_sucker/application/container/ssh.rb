@@ -3,6 +3,7 @@ module DbSucker
     class Container
       module SSH
         CommandExecutionError = Class.new(::RuntimeError)
+        ChannelOpenFailedError = Class.new(::RuntimeError)
 
         begin # SSH
           def ssh_begin
@@ -30,9 +31,11 @@ module DbSucker
           def ssh_start new_connection = false, &block
             if @ssh && !new_connection
               ssh_sync do
+                debug "Reusing SSH connection in start for identifier `#{name}'"
                 return block ? block.call(@ssh) : @ssh
               end
             end
+            debug "Opening new SSH connection in start for identifier `#{name}'"
 
             opt = {}
             opt[:user] = source["ssh"]["username"] if source["ssh"]["username"].present?
@@ -75,9 +78,11 @@ module DbSucker
           def sftp_start new_connection = false, &block
             if @sftp && !new_connection
               sftp_sync do
+                debug "Reusing SFTP connection in start for identifier `#{name}'"
                 return block ? block.call(@sftp) : @sftp
               end
             end
+            debug "Opening new SFTP connection in start for identifier `#{name}'"
 
             opt = {}
             opt[:user] = source["ssh"]["username"] if source["ssh"]["username"].present?
@@ -100,15 +105,45 @@ module DbSucker
             @ssh.loop(*args, &block)
           end
 
-          def blocking_channel ssh = nil, &block
+          def blocking_channel ssh = nil, result = nil, &block
+            waitlock = Queue.new
             (ssh || ssh_start).open_channel do |ch|
+              waitlock.pop
               block.call(ch)
-            end.tap(&:wait)
+            end.tap do |ch|
+              # catch open_fail errors
+              ch.on_open_failed do |_ch, code, desc|
+                result.try(:close!)
+                _ch[:open_failed] = true
+                raise ChannelOpenFailedError, "#{code}: #{desc}"
+              end
+
+              ch[:wait_monitor] = Monitor.new
+              ch[:wait_condition] = ch[:wait_monitor].new_cond
+              st = app.sklaventreiber
+              waitlock << true
+              if st && st.sync{ st.try(:poll)}
+                ch[:wait_monitor].synchronize do
+                  ch[:wait_condition].wait(0.1) while ch.active?
+                end
+              else
+                ch.wait
+              end
+            end
           end
 
-          def nonblocking_channel ssh = nil, &block
+          def nonblocking_channel ssh = nil, result = nil, &block
             (ssh || ssh_start).open_channel do |ch|
+              ch[:wait_monitor] = Monitor.new
+              ch[:wait_condition] = ch[:wait_monitor].new_cond
               block.call(ch)
+            end.tap do |ch|
+              # catch open_fail errors
+              ch.on_open_failed do |_ch, code, desc|
+                result.try(:close!)
+                _ch[:open_failed] = true
+                raise ChannelOpenFailedError, "#{code}: #{desc}"
+              end
             end
           end
 
@@ -126,13 +161,15 @@ module DbSucker
               pid_signal = pid_monitor.new_cond
             end
             result = EventedResultset.new
-            chan = send(opts[:blocking] ? :blocking_channel : :nonblocking_channel, opts[:ssh]) do |ch|
+            chan = send(opts[:blocking] ? :blocking_channel : :nonblocking_channel, opts[:ssh], result) do |ch|
               chproc = ->(ch, cmd, result) {
                 ch.exec(cmd) do |ch, success|
+                  Thread.main[:app].debug "START: #{Thread.current == Thread.main ? :main : Thread.current[:itype]}-#{cmd} #{success}"
                   raise CommandExecutionError, "could not execute command" unless success
 
                   # "on_data" is called when the process writes something to stdout
                   ch.on_data do |c, data|
+                    Thread.main[:app].debug "#{Thread.current == Thread.main ? :main : Thread.current[:itype]}-#{Time.current.to_f}: STDOUT: #{data}"
                     if opts[:use_sh] && result.empty?
                       ch[:pid] = data.to_i
                       ch[:pid] = false if ch[:pid].zero?
@@ -144,10 +181,21 @@ module DbSucker
 
                   # "on_extended_data" is called when the process writes something to stderr
                   ch.on_extended_data do |c, type, data|
+                    Thread.main[:app].debug "#{Thread.current == Thread.main ? :main : Thread.current[:itype]}-#{Time.current.to_f}: STDERR: #{data}"
                     result.enq(data, :stderr)
                   end
 
-                  ch.on_close do
+                  ch.on_request "exit-status" do |ch, data|
+                    Thread.main[:app].debug "#{Thread.current == Thread.main ? :main : Thread.current[:itype]}-#{Time.current.to_f}: EXIT: #{data.read_long} #{cmd}"
+                  end
+
+                  ch.on_close do |ch|
+                    ch[:wait_monitor].synchronize { ch[:wait_condition].broadcast }
+                    Thread.main[:app].debug "#{Thread.current == Thread.main ? :main : Thread.current[:itype]}-#{Time.current.to_f}: CLOSED: #{cmd}"
+                  end
+
+                  ch.on_eof do
+                    Thread.main[:app].debug "#{Thread.current == Thread.main ? :main : Thread.current[:itype]}-#{Time.current.to_f}: EOF: #{cmd}"
                     result.close!
                     ch[:handler].try(:signal)
                   end
@@ -163,7 +211,7 @@ module DbSucker
                 chproc.call(ch, cmd, result)
               end
             end
-            pid_monitor.synchronize { pid_signal.wait if !chan[:pid] } if opts[:use_sh]
+            pid_monitor.synchronize { pid_signal.wait(1) if !chan[:pid] } if opts[:use_sh]
             opts[:channel] ? [chan, result] : result
           end
 
