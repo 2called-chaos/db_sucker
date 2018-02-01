@@ -101,6 +101,7 @@ module DbSucker
         # amount of workers that can use a slot (false = infinite)
         # you can create as many pools as you want and use them in `routine_pools' setting
         slot_pools: {
+          all: false,
           remote: false,
           download: false,
           local: false,
@@ -110,17 +111,17 @@ module DbSucker
 
         # assign tasks to certain slot pools
         routine_pools: {
-          r_dump_file: [:remote],
-          r_calculate_raw_hash: [:remote],
-          r_compress_file: [:remote],
-          r_calculate_compressed_hash: [:remote],
-          l_download_file: [:download],
-          l_verify_compressed_hash: [:local],
-          l_copy_file: [:local],
-          l_decompress_file: [:local],
-          l_verify_raw_hash: [:local],
-          l_import_file: [:local, :import],
-          l_import_file_deferred: [:local, :deferred],
+          r_dump_file: [:all, :remote],
+          r_calculate_raw_hash: [:all, :remote],
+          r_compress_file: [:all, :remote],
+          r_calculate_compressed_hash: [:all, :remote],
+          l_download_file: [:all, :download],
+          l_verify_compressed_hash: [:all, :local],
+          l_copy_file: [:all, :local],
+          l_decompress_file: [:all, :local],
+          l_verify_raw_hash: [:all, :local],
+          l_import_file: [:all, :local, :import],
+          l_import_file_deferred: [:all, :local, :deferred],
         }
       }
       init_params
