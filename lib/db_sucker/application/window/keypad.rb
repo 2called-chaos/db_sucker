@@ -150,7 +150,7 @@ module DbSucker
         end
 
         def kill_ssh_poll
-          return unless sklaventreiber.workers.select{|w| !w.done? || w.sshing }.any?
+          return if sklaventreiber.workers.select{|w| !w.done? || w.sshing }.any?
           sklaventreiber.poll.try(:kill)
         end
 

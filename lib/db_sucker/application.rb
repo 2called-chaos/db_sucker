@@ -15,6 +15,7 @@ module DbSucker
           Thread.main[:app] = app
           app.load_appconfig
           app.parse_params
+          app.debug "Running with PID #{Process.pid}"
           app.dispatch
           app.haltpoint
         rescue Interrupt

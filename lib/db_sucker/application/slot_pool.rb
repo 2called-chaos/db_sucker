@@ -94,6 +94,7 @@ module DbSucker
               _wthr, _tthr = @waiting.shift
               #puts "<#{Time.current.to_f}-#{_tthr[:current_task]}> running now"
               @active.push(_tthr) unless @softclosed
+              _tthr.signal
               _wthr.signal
             end
             unless qindex(tthr)
