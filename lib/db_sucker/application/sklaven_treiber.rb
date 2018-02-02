@@ -178,10 +178,12 @@ module DbSucker
             retry
           end
 
-          if thr[:errors] > 25
+          if thr[:errors].zero?
+            app.debug "SSH error count (#{thr[:errors]})"
+          elsif thr[:errors] > 25
             app.warning "SSH error count (#{thr[:errors]}) is high! Verify remote MaxSessions setting or lower concurrent worker count."
           else
-            app.debug "SSH error count (#{thr[:errors]})"
+            app.warning "SSH errors occured (#{thr[:errors]})! Verify remote MaxSessions setting or lower concurrent worker count."
           end
         end
         wait_lock.pop
