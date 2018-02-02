@@ -43,7 +43,7 @@ module DbSucker
           else
             app.debug "1 thread remains..."
           end
-          Thread.main[:app] = nil
+          Thread.main[:app] = nil unless app.opts[:debug]
         end
       end
     end
