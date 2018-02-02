@@ -53,6 +53,18 @@ module DbSucker
           sklaventreiber.workers.each do |w|
             f.puts "#{"[SSH] " if w.sshing} #{w.descriptive} #{w.state}".strip
           end
+
+          # slot pool
+          f.puts "\n\n#{sklaventreiber.slot_pools.length} slot pools:\n"
+          sklaventreiber.slot_pools.each do |name, pool|
+            f.puts "#{name}: #{pool.slots}"
+            pool.active.each do |thr|
+              f.puts "\tactive\t #{thr} [#{thr[:itype]}]"
+            end
+            pool.waiting.each do |wthr, tthr|
+              f.puts "\twaiting\t #{tthr} [#{tthr[:itype]}]"
+            end
+          end
         end
       end
 
