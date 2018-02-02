@@ -122,7 +122,7 @@ module DbSucker
               ch[:wait_condition] = ch[:wait_monitor].new_cond
               st = app.sklaventreiber
               waitlock << true
-              if st && st.sync{ st.try(:poll)}
+              if !ssh && st && st.sync{ st.try(:poll) }
                 ch[:wait_monitor].synchronize do
                   ch[:wait_condition].wait(0.1) while ch.active?
                 end
