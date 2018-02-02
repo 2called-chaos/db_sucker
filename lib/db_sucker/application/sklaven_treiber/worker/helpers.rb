@@ -44,11 +44,14 @@ module DbSucker
             aquired = []
             which.each_with_index do |wh, i|
               if pool = sklaventreiber.slot_pools[wh]
+                waitlock = Queue.new
                 channel = app.channelfy_thread app.spawn_thread(:sklaventreiber_worker_slot_progress) {|thr|
                   thr[:current_task] = target_thread[:current_task] if target_thread[:current_task]
                   thr[:slot_pool_qindex] = Proc.new { pool.qindex(target_thread) }
+                  waitlock.pop
                   pool.aquire(target_thread)
                 }
+                waitlock << true
                 target_thread.wait
 
                 label = "aquiring slot #{i+1}/#{which.length} `#{pool.name}' :slot_pool_qindex(– #%s in queue )(:seconds)..."
@@ -62,11 +65,9 @@ module DbSucker
                 raise SlotPoolNotInitializedError, "slot pool `#{wh}' was never initialized, can't aquire slot"
               end
             end
-            begin
-              block.call
-            ensure
-              release_slots(*which)
-            end if (which - aquired).empty? && block
+            block.call if block && (which - aquired).empty?
+          ensure
+            release_slots(*which)
           end
 
           def release_slots *which
