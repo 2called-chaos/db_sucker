@@ -97,6 +97,66 @@ module DbSucker
         puts "Thread priority: -#{m[1].abs}..+#{m[2].abs}"
       end
 
+      # via -a/--action sshdiag
+      def dispatch_sshdiag
+        log c("\nPlease wait while we run some tests...\n", :blue)
+        _identifier, _ctn = false, false, false
+        idstr = ARGV.shift
+        varstr = ARGV.shift
+
+        configful_dispatch(idstr, varstr) do |identifier, ctn, variation, var|
+          _identifier = identifier
+          _ctn = ctn
+          channels = []
+          stop = false
+          maxsessions = :unknown
+          begin
+            t = Thread.new {
+              begin
+                loop do
+                  ctn.loop_ssh(0.1)
+                end
+              rescue DbSucker::Application::Container::SSH::ChannelOpenFailedError
+                maxsessions = channels.length - channels.select{|c| c[:open_failed] }.length
+                stop = true
+                retry
+              end
+            }
+            250.times do
+              break if stop
+              c, r = ctn.blocking_channel_result("sleep 60", blocking: false, channel: true, use_sh: true)
+              channels << c
+              sleep 0.1
+            end
+          ensure
+            debug "Stopping sessions (#{channels.length})..."
+            channels.each_with_index do |c, i|
+              debug "Channel ##{i+1} #{c[:pid] ? "with PID #{c[:pid]}" : "has no PID"}"
+              ctn.kill_remote_process(c[:pid]) if c[:pid]
+            end
+            log c("\nSSH MaxSessions: #{c maxsessions, :magenta}", :cyan)
+            log "This value determines how many sessions we can multiplex over a single TCP connection."
+            log "Currently, DbSucker can only utilize one connection, thus this value defines the maxmium concurrency."
+            log "If you get errors you can either"
+            log "  * increase the SSHd `MaxSessions' setting on the remote (if you can)"
+            log "  * reduce the amount of workers and/or remote slots"
+            log "  * fix the mess that is this tool, visit #{c "https://github.com/2called-chaos/db_sucker", :blue}"
+            t.kill
+          end
+        end
+      rescue Net::SSH::AuthenticationFailed => ex
+        notify_exception(ex)
+        log "\nDbSucker can't authenticate with the remote host, see exception."
+        log "  * username correct?"
+        log "  * password/keyfile correct?"
+        log "  * check remote /var/log/auth.log?"
+      rescue SocketError => ex
+        notify_exception(ex)
+        log "\nDbSucker can't establish a connection to the remote host " << c(cfg.get(idstr).source["ssh"]["hostname"], :magenta)
+        log "  * typo in hostname / IP?"
+        log "  * firewall?"
+      end
+
 
       # ================
       # = Main actions =
