@@ -263,7 +263,7 @@ module DbSucker
         if worker.status[0].respond_to?(:to_curses)
           worker.status[0].to_curses(self)
         else
-          send(worker.status[1].presence || :blue, uncolorize("#{worker.status[0]}"))
+          send(worker.status[1].presence || :blue, decolorize("#{worker.status[0]}"))
         end
       end
 

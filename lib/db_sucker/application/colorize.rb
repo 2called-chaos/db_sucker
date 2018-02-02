@@ -19,6 +19,10 @@ module DbSucker
         @opts[:colorize] ? "\e[#{ccode}m#{str}\e[0m" : "#{str}"
       end
       alias_method :c, :colorize
+
+      def decolorize str
+        str.to_s.gsub(/\e\[.*?(\d)+m/ , '')
+      end
     end
   end
 end

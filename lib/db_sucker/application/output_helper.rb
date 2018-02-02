@@ -2,7 +2,7 @@ module DbSucker
   class Application
     module OutputHelper
       def self.hook ctx
-        [:puts, :print, :warn, :debug, :log, :warning, :error, :abort, :uncolorize, :db_table_listing, :print_db_table_list, :uncolorize, :render_table, :f_percentage, :human_bytes, :human_number, :human_percentage, :human_seconds, :human_seconds2, :rll, :c, :strbool].each do |meth|
+        [:puts, :print, :warn, :debug, :log, :warning, :error, :abort, :decolorize, :db_table_listing, :print_db_table_list, :decolorize, :render_table, :f_percentage, :human_bytes, :human_number, :human_percentage, :human_seconds, :human_seconds2, :rll, :c, :strbool].each do |meth|
           ctx.__send__(:define_method, meth) do |*a|
             Thread.main[:app].__send__(meth, *a)
           end
@@ -42,10 +42,6 @@ module DbSucker
         exit(exit_code) if exit_code
       end
 
-      def uncolorize str
-        str.gsub(/\033\[[0-9;]+m/, '')
-      end
-
       def rll
         print "\033[A"
         print "\033[2K\r"
@@ -53,8 +49,8 @@ module DbSucker
 
       def render_table table, headers = []
         [].tap do |r|
-          col_sizes = table.map{|col| col.map{|i| uncolorize(i.to_s) }.map(&:length).max }
-          headers.map{|i| uncolorize(i.to_s) }.map(&:length).each_with_index do |length, header|
+          col_sizes = table.map{|col| col.map{|i| decolorize(i.to_s) }.map(&:length).max }
+          headers.map{|i| decolorize(i.to_s) }.map(&:length).each_with_index do |length, header|
             col_sizes[header] = [col_sizes[header] || 0, length || 0].max
           end
 
@@ -62,7 +58,7 @@ module DbSucker
           if headers.any?
             r << [].tap do |line|
               col_sizes.count.times do |col|
-                line << headers[col].ljust(col_sizes[col] + (headers[col].length - uncolorize(headers[col]).length))
+                line << headers[col].ljust(col_sizes[col] + (headers[col].length - decolorize(headers[col]).length))
               end
             end.join(" | ")
             r << "".ljust(col_sizes.inject(&:+) + ((col_sizes.count - 1) * 3), "-")
@@ -72,7 +68,7 @@ module DbSucker
           table[0].count.times do |row|
             r << [].tap do |line|
               col_sizes.count.times do |col|
-                line << "#{table[col][row]}".ljust(col_sizes[col] + (table[col][row].to_s.length - uncolorize(table[col][row]).length))
+                line << "#{table[col][row]}".ljust(col_sizes[col] + (table[col][row].to_s.length - decolorize(table[col][row]).length))
               end
             end.join(" | ")
           end
