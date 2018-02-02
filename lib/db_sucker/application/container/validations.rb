@@ -17,10 +17,14 @@ module DbSucker
           # validate variations
           if sd = data["variations"]
             sd.each do |name, vd|
-              _verify("/variations/#{name}", vd, __keys_for(:variation))
-              base = sd[vd["base"]] if vd["base"]
-              raise(ConfigurationError, "variation `#{name}' cannot base from `#{vd["base"]}' since it doesn't exist (in `#{src}')") if vd["base"] && !base
-              raise ConfigurationError, "variation `#{name}' must define an adapter (mysql2, postgres, ...)" if vd["adapter"].blank? && (!base || base["adapter"].blank?)
+              begin
+                _verify("/variations/#{name}", vd, __keys_for(:variation))
+                base = sd[vd["base"]] if vd["base"]
+                raise(ConfigurationError, "variation `#{name}' cannot base from `#{vd["base"]}' since it doesn't exist (in `#{src}')") if vd["base"] && !base
+                raise ConfigurationError, "variation `#{name}' must define an adapter (mysql2, postgres, ...)" if vd["adapter"].blank? && vd["database"] != false && (!base || base["adapter"].blank?)
+              rescue ConfigurationError => ex
+                abort "#{ex.message} (in `#{src}' [/variations/#{name}])"
+              end
             end
           end
         end
@@ -30,7 +34,7 @@ module DbSucker
             hash.assert_valid_keys(keys)
             raise ConfigurationError, "A source must define an adapter (mysql2, postgres, ...)" if token == "/source" && hash["adapter"].blank?
             raise ConfigurationError, "A variation `#{name}' can only define either a `only' or `except' option" if hash["only"] && hash["except"]
-          rescue ConfigurationError => ex
+          rescue ConfigurationError, ArgumentError => ex
             abort "#{ex.message} (in `#{src}' [#{token}])"
           end
         end
