@@ -15,6 +15,7 @@ module DbSucker
           key_bindings: [
             ["?", "shows this help"],
             ["^", "eval prompt (app context, synchronized)"],
+            ["L", "show latest spooled log entries (no scrolling)"],
             ["P", "kill SSH polling (if it stucks)"],
             ["T", "create core dump and open in editor"],
             ["q", "quit prompt"],
@@ -43,6 +44,7 @@ module DbSucker
               case ch
               when ":" then main_prompt
               when "^" then eval_prompt # (@development)
+              when "L" then show_log # (@development)
               when "T" then dump_core # (@development)
               when "P" then kill_ssh_poll
               when "?" then show_help
@@ -97,6 +99,19 @@ module DbSucker
 
         def show_help
           view_was = window.change_view(:help)
+          prompt!("[press any key to return]",
+            return_on_buffer: true,
+            capture_enter: false,
+            has_cursor: false,
+            capture_escape: false,
+            cursor_visible: false
+          ) do |response|
+            window.change_view(view_was)
+          end
+        end
+
+        def show_log
+          view_was = window.change_view(:log)
           prompt!("[press any key to return]",
             return_on_buffer: true,
             capture_enter: false,

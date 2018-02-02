@@ -2,7 +2,7 @@ module DbSucker
   class Application
     class SklavenTreiber
       class LogSpool
-        attr_reader :original
+        attr_reader :original, :spool
 
         def initialize original
           @original = original

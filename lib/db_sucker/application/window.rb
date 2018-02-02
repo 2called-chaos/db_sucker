@@ -153,6 +153,23 @@ module DbSucker
         @keypad.prompt.render(self, lines-1)
       end
 
+      def _view_log
+        _render_status(threads: false, started: false, trxid: false, database: false)
+        next_line
+        limit = lines - @line - 1
+        if app.opts[:stdout].is_a?(SklavenTreiber::LogSpool)
+          app.opts[:stdout].spool[-limit..-1].each do |m, l, t|
+            ts = "[#{t}] "
+            gray(ts)
+            white decolorize(l.join(" "))[0..(cols - ts.length)]
+            next_line
+          end
+        else
+          red "Log spooling is not enabled, can't show log entries!"
+        end
+        @keypad.prompt.render(self, lines-1)
+      end
+
       def _view_status
         _render_status
         _render_workers
