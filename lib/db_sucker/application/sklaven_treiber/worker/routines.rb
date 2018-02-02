@@ -238,11 +238,16 @@ module DbSucker
           def _l_import_file
             if File.size(@local_file_raw) > app.opts[:deferred_threshold] && app.opts[:deferred_import]
               @deferred = true
-              @perform << "l_import_file_deferred"
+              @perform << "l_wait_for_workers"
               wait_defer_ready
             else
               cancel!("importing not yet implemented", true)
             end
+          end
+
+          def _l_wait_for_workers
+            @perform << "l_import_file_deferred"
+            wait_defer_ready
           end
 
           def _l_import_file_deferred

@@ -123,6 +123,7 @@ module DbSucker
           l_decompress_file: [:all, :local],
           l_verify_raw_hash: [:all, :local],
           l_import_file: [:all, :local, :import],
+          l_wait_for_workers: [:all, :local],
           l_import_file_deferred: [:all, :local, :deferred],
         }
       }
