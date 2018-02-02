@@ -169,7 +169,7 @@ module DbSucker
 
                   # "on_data" is called when the process writes something to stdout
                   ch.on_data do |c, data|
-                    Thread.main[:app].debug "#{Thread.current == Thread.main ? :main : Thread.current[:itype]}-#{Time.current.to_f}: STDOUT: #{data}"
+                    Thread.main[:app].debug "#{Thread.current == Thread.main ? :main : Thread.current[:itype]}-#{Time.current.to_f}: STDOUT: #{data}".chomp
                     if opts[:use_sh] && result.empty?
                       ch[:pid] = data.to_i
                       ch[:pid] = false if ch[:pid].zero?
@@ -181,21 +181,21 @@ module DbSucker
 
                   # "on_extended_data" is called when the process writes something to stderr
                   ch.on_extended_data do |c, type, data|
-                    Thread.main[:app].debug "#{Thread.current == Thread.main ? :main : Thread.current[:itype]}-#{Time.current.to_f}: STDERR: #{data}"
+                    Thread.main[:app].debug "#{Thread.current == Thread.main ? :main : Thread.current[:itype]}-#{Time.current.to_f}: STDERR: #{data}".chomp
                     result.enq(data, :stderr)
                   end
 
                   ch.on_request "exit-status" do |ch, data|
-                    Thread.main[:app].debug "#{Thread.current == Thread.main ? :main : Thread.current[:itype]}-#{Time.current.to_f}: EXIT: #{data.read_long} #{cmd}"
+                    Thread.main[:app].debug "#{Thread.current == Thread.main ? :main : Thread.current[:itype]}-#{Time.current.to_f}: EXIT: #{data.read_long} #{cmd}".chomp
                   end
 
                   ch.on_close do |ch|
                     ch[:wait_monitor].synchronize { ch[:wait_condition].broadcast }
-                    Thread.main[:app].debug "#{Thread.current == Thread.main ? :main : Thread.current[:itype]}-#{Time.current.to_f}: CLOSED: #{cmd}"
+                    Thread.main[:app].debug "#{Thread.current == Thread.main ? :main : Thread.current[:itype]}-#{Time.current.to_f}: CLOSED: #{cmd}".chomp
                   end
 
                   ch.on_eof do
-                    Thread.main[:app].debug "#{Thread.current == Thread.main ? :main : Thread.current[:itype]}-#{Time.current.to_f}: EOF: #{cmd}"
+                    Thread.main[:app].debug "#{Thread.current == Thread.main ? :main : Thread.current[:itype]}-#{Time.current.to_f}: EOF: #{cmd}".chomp
                     result.close!
                     ch[:handler].try(:signal)
                   end
