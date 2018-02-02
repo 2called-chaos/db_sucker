@@ -178,6 +178,7 @@ Currently there are two (well three) importers to choose from.
   The issue is that I cannot download multiple files over the same connection at the same time. Until I figured it out there are typically
   2 connections + 1 for each download. With (atm hardcoded) 20 workers you will reach, with one process of db_sucker, 22 connections in the worst case.
 * Ruby 2.3.0 has a bug that might segfault your ruby if some exceptions occur, this is fixed since 2.3.1 and later
+* Consumers that are waiting (e.g. deferred or slot pool) won't release it's task, if you have to few consumers you might softlock
 
 
 ## Todo
