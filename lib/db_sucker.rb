@@ -66,8 +66,9 @@ require "db_sucker/adapters/mysql2"
 
 # patches
 require "db_sucker/patches/net-sftp"
-
 if ENV["DBS_DEVELOPER"] && ENV["DBS_DEVELOPER"] != "false"
+  require "pry"
+  require "pry-remote"
   require "db_sucker/patches/developer"
   require "db_sucker/patches/thread-count"
 end
