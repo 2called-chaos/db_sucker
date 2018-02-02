@@ -95,6 +95,7 @@ module DbSucker
             # set type and priority
             thr[:itype] = type
             thr.priority = @opts[:"tp_#{type}"]
+            thr.abort_on_exception = true
 
             # add signal methods
             signalify_thread(thr)
