@@ -1,8 +1,10 @@
 # This is the example configuration and contains all settings available and serves also
 # as documentation. All settings that are commented out are default values, all other
 # values should be changed according to you environment but you can still remove some
-# of those (e.g. SSH has a few defaults like username, keyfile, etc.).
+# of those (e.g. SSH/MySQL have a few defaults like username, keyfile, etc.).
 
+# The name of the container, this is what you have to type later when invoking `db_sucker`.
+# It must not match the filename (the filename is irrelevant actually).
 my_identifier:
   # Source contains all information regarding the remote host and database
   source:
@@ -24,7 +26,9 @@ my_identifier:
       ## The remote temp directory to place dumpfiles in. Must be writable by the
       ## SSH user and should be exclusively used for this tool though cleanup only
       ## removes .dbsc files. The directory MUST EXIST!
-      tmp_location: /home/my_dump_user/db_sucker_tmp
+      ## If you want to use a directory relative to your home directory use single
+      ## dot since tilde won't work (e.g. ./my_tmp vs ~/my_tmp)
+      tmp_location: ./db_sucker_tmp
 
     ## Remote database settings. DON'T limit tables via arguments!
     adapter: mysql2 # only mysql is supported at the moment

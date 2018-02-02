@@ -137,6 +137,7 @@ module DbSucker
         opts.banner = "Usage: db_sucker [options] [identifier [variation]]"
 
         opts.separator("\n" << "# Application options")
+        opts.on(      "--new NAME", String, "Generates new container config in #{core_cfg_path}") {|v| @opts[:dispatch] = :generate_config; @opts[:config_name] = v }
         opts.on("-a", "--action ACTION", String, "Dispatch given action") {|v| @opts[:dispatch] = v }
         opts.on("-m", "--mode MODE", String, "Dispatch action with given mode") {|v| @opts[:mode] = v.to_sym }
         opts.on("-n", "--no-deffer", "Don't use deferred import for files > 50 MB SQL data size.") { @opts[:deferred_import] = false }

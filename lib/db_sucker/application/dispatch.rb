@@ -219,6 +219,21 @@ module DbSucker
         puts c ""
       end
 
+      # via --generate
+      def dispatch_generate_config
+        cfg_name = @opts[:config_name] || "default"
+        cfg_file = "#{core_cfg_path}/#{cfg_name}.yml"
+        puts c("Generating container configuration file `#{cfg_name}'")
+        if File.exist?(cfg_file)
+          abort "Conflict, file already exists: #{cfg_file}", 1
+        else
+          puts c("Writing #{cfg_file}", :green)
+          FileUtils.cp("#{ROOT}/doc/container_example.yml", cfg_file)
+          editor = ENV["EDITOR"].presence
+          exec("#{editor.chomp} #{cfg_file}") if editor
+        end
+      end
+
       # helper for #dispatch_stat_tmp
       def _dispatch_stat_tmp_display files, directories, managed, cleanup = false, sftp = false
         log "Directories: #{c directories.count, :blue}"

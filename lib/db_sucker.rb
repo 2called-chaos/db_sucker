@@ -1,3 +1,7 @@
+module DbSucker
+  ROOT = File.expand_path("../..", __FILE__)
+end
+
 # stdlib
 require "benchmark"
 require "optparse"
