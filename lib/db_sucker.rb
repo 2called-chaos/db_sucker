@@ -57,6 +57,7 @@ require "db_sucker/application/dispatch"
 require "db_sucker/application/colorize"
 require "db_sucker/application/slot_pool"
 require "db_sucker/application/evented_resultset"
+require "db_sucker/application/fake_channel"
 require "db_sucker/application/core"
 require "db_sucker/application"
 

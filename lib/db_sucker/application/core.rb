@@ -126,6 +126,13 @@ module DbSucker
         thr
       end
 
+      def fake_channel &block
+        FakeChannel.new(&block).tap do |ch|
+          channelfy_thread(ch)
+          signalify_thread(ch)
+        end
+      end
+
       def wakeup_handlers
         Thread.list.each{|thr| thr.try(:signal) }
       end
