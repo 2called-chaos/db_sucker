@@ -58,52 +58,6 @@ module DbSucker
             nfile, cmd = compress_file_command(file)
             [nfile, cfg.blocking_channel_result(cmd, channel: true, use_sh: true, blocking: blocking)]
           end
-
-          # def wait_for_workers
-          #   channelfy_thread Thread.new {
-          #     loop do
-          #       Thread.current[:workers] = $importing.synchronize { $importing.length }
-          #       break if Thread.current[:workers] == 0
-          #       sleep 1
-          #     end
-          #   }
-          # end
-
-          # def load_local_file worker, file, &block
-          #   imp = data["importer"]
-          #   impf = parse_flags(data["importer_flags"])
-
-          #   if imp == "void10"
-          #     t = channelfy_thread Thread.new{ sleep 10 }
-          #   elsif imp == "sequel" || constraint(worker.table)
-          #     raise NotImplementedError, "SequelImporter is not yet implemented/ported to new db_sucker version!"
-          #     # imp_was_sequel = imp == "sequel"
-          #     # imp = "sequel"
-          #     # t = channelfy_thread Thread.new {
-          #     #   Thread.current[:importer] = imp = SequelImporter.new(worker, file, ignore_errors: !imp_was_sequel)
-          #     #   imp.start
-          #     # }
-          #   elsif imp == "binary"
-          #     t = channelfy_thread Thread.new{
-          #       cmd = load_command_for(file, impf.merge(dirty: impf[:dirty] && worker.deferred))
-          #       Open3.popen2e(cmd, pgroup: true) do |_ipc_stdin, _ipc_stdouterr, _ipc_thread|
-          #         outerr, exit_status = _ipc_stdouterr.read, _ipc_thread.value
-          #         if exit_status != 0
-          #           Thread.current[:error_message] = outerr.strip
-          #           sleep 3
-          #         end
-          #       end
-          #     }
-          #   else
-          #     raise ImporterNotFoundError, "variation `#{cfg.name}/#{name}' defines unknown importer `#{imp}' (in `#{cfg.src}')"
-          #   end
-
-          #   block.call(imp, t)
-          # end
-
-          # def dump_to_local_stream
-          #   raise NotImplemented
-          # end
         end
       end
     end

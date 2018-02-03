@@ -240,7 +240,8 @@ module DbSucker
               @deferred = true
               @perform << "l_wait_for_workers"
             else
-              cancel!("importing not yet implemented", true)
+              # cancel!("importing not yet implemented", true)
+              _do_import_file
             end
           end
 
@@ -250,65 +251,61 @@ module DbSucker
           end
 
           def _l_import_file_deferred
-            @status = ["importing", :yellow]
-            sleep [*1..10].sample
-            cancel!("deferred importing not yet implemented", true)
+            @status = ["importing #{human_bytes(File.size(@local_file_raw))} SQL data into local server...", :yellow]
+            _do_import_file(@local_file_raw)
           end
 
-          # def _do_import_file(file, deferred = false)
-          #   $importing.synchronize { $importing << self }
-          #   var.load_local_file(self, file) do |importer, channel|
-          #     case importer
-          #       when "sequel"
-          #         sequel_progress(channel).join
-          #         if channel[:importer].error
-          #           @status = ["importing with Sequel", :yellow]
-          #           raise channel[:importer].error
-          #         end
-          #       else second_progress(channel, "#{"(deferred) " if deferred}loading file (#{human_filesize(File.size(file))}) into local SQL server (:seconds)...").join
-          #     end
-          #     throw :abort_execution, channel[:error_message] if channel[:error_message]
-          #     @return_message = channel[:return_message] if channel[:return_message]
-          #   end
-          # ensure
-          #   $importing.synchronize { $importing.delete(self) }
-          # end
+          def _do_import_file
+            @status = ["importing #{human_bytes(File.size(@local_file_raw))} SQL data into local server...", :yellow]
 
-          # def _deferred_import
-          #   @local_files_to_remove << @deferred
+            imp = @var.data["importer"]
+            impf = @var.parse_flags(var.data["importer_flags"]).merge(deferred: @deferred)
 
-          #   # ==================================
-          #   # = Wait for other workers to exit =
-          #   # ==================================
-          #   @status = ["waiting for other workers...", :blue]
-          #   wchannel = var.wait_for_workers
-          #   twc = second_progress(wchannel, "waiting for :workers other workers (:seconds)...", :blue, true)
-          #   twc.join
-          #   may_interrupt
-
-          #   # =================
-          #   # = Aquiring lock =
-          #   # =================
-          #   @status = ["waiting for deferred import lock...", :blue]
-          #   @locked = false
-
-          #   progress_thread = Thread.new do
-          #     t = var.channelfy_thread(Thread.new{ sleep 1 until @locked })
-          #     second_progress(t, "waiting for deferred import lock (:seconds)...", :blue, false, twc[:iteration]).join
-          #   end
-
-          #   $deferred_importer.synchronize do
-          #     @locked = true
-          #     progress_thread.join
-          #     may_interrupt
-
-          #     # ===============================
-          #     # = Import file to local server =
-          #     # ===============================
-          #     @status = ["(deferred) loading file into local SQL server...", :yellow]
-          #     _do_import_file(@deferred, true)
-          #   end
-          # end
+            if imp == "void10"
+              t = app.channelfy_thread app.spawn_thread(:sklaventreiber_worker_io_import_sql) {|thr| thr.wait(10) }
+              second_progress(t, "importing with void10, sleeping 10 seconds (:seconds)...").join
+            elsif imp == "sequel" || @var.constraint(table)
+              raise NotImplementedError, "SequelImporter is not yet implemented/ported to new db_sucker version!"
+              #     # imp_was_sequel = imp == "sequel"
+              #     # imp = "sequel"
+              #     # t = app.channelfy_thread Thread.new {
+              #     #   Thread.current[:importer] = imp = SequelImporter.new(worker, file, ignore_errors: !imp_was_sequel)
+              #     #   imp.start
+              #     # }
+              #   var.load_local_file(self, file) do |importer, channel|
+              #     case importer
+              #       when "sequel"
+              #         sequel_progress(channel).join
+              #         if channel[:importer].error
+              #           @status = ["importing with Sequel", :yellow]
+              #           raise channel[:importer].error
+              #         end
+              #       else second_progress(channel, "#{"(deferred) " if deferred}loading file (#{human_filesize(File.size(file))}) into local SQL server (:seconds)...").join
+              #     end
+              #     throw :abort_execution, channel[:error_message] if channel[:error_message]
+              #     @return_message = channel[:return_message] if channel[:return_message]
+              #   end
+            elsif imp == "binary"
+              t = app.channelfy_thread app.spawn_thread(:sklaventreiber_worker_io_import_sql) {|thr|
+                begin
+                  file_import_sql(@ctn, :instruction) do |fi|
+                    @status = [fi, "yellow"]
+                    fi.instruction = @var.import_instruction_for(@local_file_raw, impf)
+                    fi.filesize = File.size(@local_file_raw)
+                    fi.status_format = app.opts[:status_format]
+                    fi.abort_if { @should_cancel }
+                    fi.import!
+                  end
+                rescue Worker::IO::FileImportSql::ImportError => ex
+                  fail! "ImportError: #{ex.message}"
+                  sleep 3
+                end
+              }
+            else
+              raise ImporterNotFoundError, "variation `#{cfg.name}/#{name}' defines unknown importer `#{imp}' (in `#{cfg.src}')"
+            end
+            t.join
+          end
         end
       end
     end

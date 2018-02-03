@@ -91,10 +91,10 @@ module DbSucker
         tp_sklaventreiber_throughput: +2,
         tp_sklaventreiber_worker: -1,
         tp_sklaventreiber_worker_ctrl: -1,
-        tp_sklaventreiber_worker_local_execute: +2,
         tp_sklaventreiber_worker_slot_progress: -2,
         tp_sklaventreiber_worker_second_progress: -2,
         tp_sklaventreiber_worker_io_pv_killer: -2,
+        tp_sklaventreiber_worker_io_import_sql: +3,
 
         # used to open core dumps (should be a blocking call, e.g. `subl -w' or `mate -w')
         # MUST be windowed! vim, nano, etc. will not work!

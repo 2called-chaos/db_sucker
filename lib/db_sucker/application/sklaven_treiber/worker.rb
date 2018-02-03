@@ -22,6 +22,7 @@ module DbSucker
           @timings = {}
           @deferred = false
           @spinner_frames = sklaventreiber.window.try(:spinner_frames).try(:dup) || []
+          @current_perform = :unknown
           @perform = %w[].tap do |perform|
             perform << "r_dump_file"
             perform << "r_calculate_raw_hash" if ctn.integrity?

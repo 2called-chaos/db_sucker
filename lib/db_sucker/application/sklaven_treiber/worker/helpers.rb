@@ -39,6 +39,12 @@ module DbSucker
             end
           end
 
+          def file_import_sql *args, &block
+            IO::FileImportSql.new(self, *args).tap do |op|
+              block.try(:call, op)
+            end
+          end
+
           def aquire_slots *which, &block
             target_thread = Thread.current
             aquired = []

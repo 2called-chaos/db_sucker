@@ -58,28 +58,23 @@ module DbSucker
           end * " "
         end
 
-        def import_command_for file, opts = {}
-          base = [].tap do |r|
-            r << local_client_call
-            r << data["database"]
-            r << "#{data["args"]}"
-          end * " "
-
-          if opts[:dirty]
-            %{
-              (
-                echo "SET AUTOCOMMIT=0;"
-                echo "SET UNIQUE_CHECKS=0;"
-                echo "SET FOREIGN_KEY_CHECKS=0;"
-                cat #{file}
-                echo "SET FOREIGN_KEY_CHECKS=1;"
-                echo "SET UNIQUE_CHECKS=1;"
-                echo "SET AUTOCOMMIT=1;"
-                echo "COMMIT;"
-              ) | #{base}
-            }
-          else
-            "#{base} < #{file}"
+        def import_instruction_for file, flags = {}
+          {}.tap do |instruction|
+            instruction[:bin] = [local_client_call, data["database"], data["args"]].join(" ")
+            instruction[:file] = file
+            if flags[:dirty] && flags[:deferred]
+              instruction[:file_prepend] = %{
+                  echo "SET AUTOCOMMIT=0;"
+                  echo "SET UNIQUE_CHECKS=0;"
+                  echo "SET FOREIGN_KEY_CHECKS=0;"
+              }
+              instruction[:file_append] = %{
+                  echo "SET FOREIGN_KEY_CHECKS=1;"
+                  echo "SET UNIQUE_CHECKS=1;"
+                  echo "SET AUTOCOMMIT=1;"
+                  echo "COMMIT;"
+              }
+            end
           end
         end
 
