@@ -168,7 +168,7 @@ module DbSucker
 
       def load_appconfig
         return unless File.exist?(core_cfg_configfile)
-        eval File.read(core_cfg_configfile, encoding: "utf-8"), binding, core_cfg_configfile
+        instance_eval File.read(core_cfg_configfile, encoding: "utf-8"), core_cfg_configfile
       end
 
 
