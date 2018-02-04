@@ -228,6 +228,7 @@ module DbSucker
           abort "Conflict, file already exists: #{cfg_file}", 1
         else
           puts c("Writing #{cfg_file}", :green)
+          FileUtils.mkdir_p(core_cfg_path)
           FileUtils.cp("#{ROOT}/doc/container_example.yml", cfg_file)
           editor = ENV["EDITOR"].presence
           exec("#{editor.chomp} #{cfg_file}") if editor
