@@ -10,7 +10,7 @@ module DbSucker
       OutputHelper.hook(self)
 
       attr_reader :app, :sklaventreiber, :keypad, :tick, :spinner_frames
-      attr_accessor :view
+      attr_accessor :view, :x_offset, :force_kill
 
       def initialize app, sklaventreiber
         @app = app
@@ -20,6 +20,7 @@ module DbSucker
         @line = 0
         @tick = 0
         @view = :status
+        @force_kill = false
         choose_spinner
       end
 

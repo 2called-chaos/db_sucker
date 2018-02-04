@@ -81,7 +81,13 @@ module DbSucker
         def sbuf ch
           #@buffer.concat(ch.bytes.to_s)
           @cpos.zero? ? @buffer.concat(ch) : @buffer.insert(@cpos - 1, ch)
-          _enter if @opts[:return_on_buffer]
+          if @opts[:return_on_buffer].is_a?(Regexp)
+            _enter if @buffer.match(@opts[:return_on_buffer])
+          elsif @opts[:return_on_buffer].is_a?(Proc)
+            _enter if @opts[:return_on_buffer].call(@buffer, ch)
+          elsif @opts[:return_on_buffer]
+            _enter
+          end
         end
 
         def _escape

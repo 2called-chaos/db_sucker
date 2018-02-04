@@ -176,7 +176,7 @@ module DbSucker
       # = Signal trapping =
       # ===================
       def trap_signals
-        debug "Trapping INT signal..."
+        debug "Trapping signals..."
         Signal.trap("INT") do
           $core_runtime_exiting = 1
           Kernel.puts "Interrupting..."
@@ -191,7 +191,7 @@ module DbSucker
       end
 
       def release_signals
-        debug "Releasing INT signal..."
+        debug "Releasing signal traps..."
         Signal.trap("INT", "DEFAULT")
         Signal.trap("TERM", "DEFAULT")
         Signal.trap("USR1", "DEFAULT")

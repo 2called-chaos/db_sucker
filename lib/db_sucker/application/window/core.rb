@@ -37,7 +37,7 @@ module DbSucker
         def start_window_loop
           @loop = app.spawn_thread(:window_draw_loop) do |thr|
             loop do
-              break if thr[:stop] && @view == :status
+              break if thr[:stop] && (@view == :status || @force_kill)
               refresh_screen if app.opts[:window_draw]
               thr.wait(app.opts[:window_refresh_delay])
             end
@@ -97,6 +97,7 @@ module DbSucker
 
         def update
           clear
+          @x_offset = 0
           @line = -1
           yield if block_given?
           next_line
@@ -105,12 +106,12 @@ module DbSucker
         end
 
         def line l = 1
-          setpos(l - 1, 0)
+          setpos(l - 1, @x_offset)
         end
 
         def next_line
           @line += 1
-          setpos(@line, 0)
+          setpos(@line, @x_offset)
         end
 
         def change_view new_view
@@ -155,6 +156,14 @@ module DbSucker
           send(opts[:prog_current_color], "".ljust(pcur, opts[:prog_current])) unless pcur.zero?
           send(opts[:prog_remain_color], "".ljust(prem, opts[:prog_remain])) unless prem.zero?
           send(opts[:prog_close_color], "#{opts[:prog_close]}")
+        end
+
+        def dialog &block
+          Dialog.new(self, &block)
+        end
+
+        def dialog! &block
+          dialog(&block).render!
         end
 
         # colors
