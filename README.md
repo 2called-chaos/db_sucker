@@ -7,6 +7,7 @@ You configure your hosts via an YAML configuration in which you can define multi
 
 This tool is meant for pulling live data into your development environment. **It is not designed for backups!** but you might get away with it.
 
+![screenshot](https://imgur.com/EAjWrEd)
 
 ---
 ## Alpha product (v3 is a rewrite), use at your own risk, always have a backup!
