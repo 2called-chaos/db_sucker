@@ -30,6 +30,8 @@ opts[:slot_pools][:deferred] = 1
 # Add event listeners, there are currently these events with their arguments:
 #   - core_exception(app, exception)
 #   - core_shutdown(app)
+#   - dispatch_before(app, [action || false if not found])
+#   - dispatch_after(app, [action || false if not found], [exception if raised])
 #   - worker_routine_before_all(app, worker)
 #   - worker_routine_before(app, worker, current_routine)
 #   - worker_routine_after(app, worker, current_routine)
@@ -42,6 +44,7 @@ hook :core_shutdown do |app|
 end
 
 # Define additional actions that can be invoked using `-a/--action foo`
+# Must start with `dispatch_` to be available.
 def dispatch_foo
   configful_dispatch(ARGV.shift, ARGV.shift) do |identifier, ctn, variation, var|
     # execute command on remote and print results

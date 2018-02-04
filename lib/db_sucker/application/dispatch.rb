@@ -3,10 +3,18 @@ module DbSucker
     module Dispatch
       def dispatch action = (@opts[:dispatch] || :help)
         if respond_to?("dispatch_#{action}")
+          has_action = true
+          fire(:dispatch_before, action)
           send("dispatch_#{action}")
         else
+          fire(:dispatch_before, false)
           abort("unknown action `#{action}'\nRegistered actions: #{available_actions.join(", ")}")
         end
+      rescue StandardError => ex
+        fire(:dispatch_after, has_action ? action : false, ex)
+        raise ex
+      else
+        fire(:dispatch_after, has_action ? action : false)
       end
 
       def available_actions
