@@ -16,6 +16,7 @@ module DbSucker
           app.load_appconfig
           app.parse_params
           app.debug "Running with PID #{Process.pid}"
+          app.debug "Runtime: #{RUBY_DESCRIPTION}"
           app.dispatch
           app.haltpoint
         rescue Interrupt
@@ -39,7 +40,7 @@ module DbSucker
           app.fire(:core_shutdown)
           remain = Thread.list.length
           if remain > 1
-            app.warning "#{Thread.list.length} threads remain (should be 1)..."
+            app.warning "#{remain} threads remain (should be 1)..."
           else
             app.debug "1 thread remains..."
           end

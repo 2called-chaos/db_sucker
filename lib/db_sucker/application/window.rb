@@ -156,8 +156,8 @@ module DbSucker
       def _view_log
         _render_status(threads: false, started: false, trxid: false, database: false)
         next_line
-        limit = lines - @line - 1
         if app.opts[:stdout].is_a?(SklavenTreiber::LogSpool)
+          limit = [lines - @line - 1, app.opts[:stdout].spool.length].min
           app.opts[:stdout].spool[-limit..-1].each do |m, l, t|
             ts = "[#{t}] "
             gray(ts)

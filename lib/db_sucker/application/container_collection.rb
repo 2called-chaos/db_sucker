@@ -2,6 +2,7 @@ module DbSucker
   class Application
     class ContainerCollection
       DuplicateIdentifierError = Class.new(::ArgumentError)
+      YAMLParseError = Class.new(::RuntimeError)
 
       attr_reader :app, :data
 
@@ -30,6 +31,8 @@ module DbSucker
             @data[id] = Container.new(app, id, file, cfg)
           end
         end
+      rescue Psych::SyntaxError => ex
+        app.abort ex.message
       end
 
       def get id
