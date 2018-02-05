@@ -252,7 +252,7 @@ module DbSucker
 
           def _l_import_file_deferred
             @status = ["importing #{human_bytes(File.size(@local_file_raw))} SQL data into local server...", :yellow]
-            _do_import_file(@local_file_raw)
+            _do_import_file
           end
 
           def _do_import_file
