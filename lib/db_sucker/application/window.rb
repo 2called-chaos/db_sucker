@@ -4,9 +4,6 @@ module DbSucker
       include Core
       include Curses
       COLOR_GRAY = 8
-      COL1 = 20
-      COL2 = 25
-      COL3 = 20
       OutputHelper.hook(self)
 
       attr_reader :app, :sklaventreiber, :keypad, :tick, :spinner_frames
@@ -193,7 +190,7 @@ module DbSucker
         if opts[:threads]
           next_line
           yellow "       Threads: "
-          blue "#{Thread.list.length} ".ljust(COL1, " ")
+          blue "#{Thread.list.length}".ljust(3, " ")
         end
 
         if opts[:started]
@@ -292,7 +289,7 @@ module DbSucker
 
         puts
         puts c("        Status: ") << c(sklaventreiber.status[0], sklaventreiber.status[1].presence || "red")
-        puts c("       Threads: ") << c("#{Thread.list.length} ".ljust(COL1, " "), :blue)
+        puts c("       Threads: ") << c("#{Thread.list.length} ", :blue)
         puts c("       Started: ") << c("#{@app.boot}", :blue) << c(" (") << c(human_seconds(Time.current - app.boot), :blue) << c(")")
         puts c("Transaction ID: ") << c("#{sklaventreiber.trxid}", :cyan)
         puts c("      Database: ") << c(t_db || "?", :magenta) << c(" (transferred ") << c(t_total || "?", :blue) << c(" of ") << c(t_done || "?", :blue) << c(" tables)")
