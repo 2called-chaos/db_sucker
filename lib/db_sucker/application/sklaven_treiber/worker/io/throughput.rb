@@ -66,12 +66,12 @@ module DbSucker
 
             def register target
               sync do
-                if @instances[target]
+                if @instances[target.object_id]
                   raise InstanceAlreadyRegisteredError, "throughput manager cannot register more than once on the same target: `#{target}'"
                 else
                   raise NotImplementedError, "throughput manager requires the target to respond_to?(:filesize)" unless target.respond_to?(:filesize)
                   raise NotImplementedError, "throughput manager requires the target to respond_to?(:offset)" unless target.respond_to?(:offset)
-                  @instances[target] = Instance.new(self, target)
+                  @instances[target.object_id] = Instance.new(self, target)
                 end
               end
             end
