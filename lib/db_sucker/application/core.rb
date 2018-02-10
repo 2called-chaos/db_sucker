@@ -94,7 +94,7 @@ module DbSucker
           end.tap do |thr|
             # set type and priority
             thr[:itype] = type
-            thr.priority = @opts[:"tp_#{type}"]
+            thr.priority = @opts[:"tp_#{type}"] || 0
             thr.abort_on_exception = true
 
             # add signal methods
