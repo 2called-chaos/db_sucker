@@ -4,7 +4,6 @@ end
 
 # stdlib
 require "benchmark"
-require "optparse"
 require "fileutils"
 require "thread"
 require "monitor"
