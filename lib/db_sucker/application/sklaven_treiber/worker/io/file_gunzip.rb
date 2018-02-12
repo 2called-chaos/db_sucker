@@ -42,7 +42,6 @@ module DbSucker
                 ensure
                   @state = :finishing
                   gz.close
-                  @in_file.close
                   @out_file.close
                 end
 
