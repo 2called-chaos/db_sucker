@@ -302,7 +302,7 @@ module DbSucker
                 end
               }
             else
-              raise ImporterNotFoundError, "variation `#{cfg.name}/#{name}' defines unknown importer `#{imp}' (in `#{cfg.src}')"
+              raise Container::Variation::ImporterNotFoundError, "variation `#{@var.cfg.name}/#{@var.name}' defines unknown importer `#{imp}' (in `#{@var.cfg.src}')"
             end
             t.join
           end
