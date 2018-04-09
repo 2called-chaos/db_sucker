@@ -107,42 +107,54 @@ module DbSucker
 
       # via -a/--action sshdiag
       def dispatch_sshdiag
-        log c("\nPlease wait while we run some tests...\n", :blue)
         _identifier, _ctn = false, false, false
         idstr = ARGV.shift
         varstr = ARGV.shift
 
         configful_dispatch(idstr, varstr) do |identifier, ctn, variation, var|
+          log c("\nPlease wait while we run some tests...\n", :blue)
           _identifier = identifier
           _ctn = ctn
           channels = []
+          monitor = Monitor.new
           stop = false
           maxsessions = :unknown
           begin
             t = Thread.new {
               begin
                 loop do
-                  ctn.loop_ssh(0.1)
+                  ctn.loop_ssh(0.1) { monitor.synchronize { channels.any? } }
                 end
               rescue DbSucker::Application::Container::SSH::ChannelOpenFailedError
-                maxsessions = channels.length - channels.select{|c| c[:open_failed] }.length
-                stop = true
+                monitor.synchronize do
+                  maxsessions = channels.length - channels.select{|c| c[:open_failed] }.length
+                  stop = true
+                  print "!"
+                end
                 retry
               end
             }
             250.times do
-              break if stop
+              break if monitor.synchronize { stop }
               c, r = ctn.blocking_channel_result("sleep 60", blocking: false, channel: true, use_sh: true)
-              channels << c
+              monitor.synchronize do
+                channels << c
+                print "+"
+              end
               sleep 0.1
             end
           ensure
             debug "Stopping sessions (#{channels.length})..."
-            channels.each_with_index do |c, i|
-              debug "Channel ##{i+1} #{c[:pid] ? "with PID #{c[:pid]}" : "has no PID"}"
+            i = 1
+            loop do
+              break if monitor.synchronize { channels.empty? }
+              c = monitor.synchronize { channels.shift }
+              debug "Channel ##{i} #{c[:pid] ? "with PID #{c[:pid]}" : "has no PID"}"
               ctn.kill_remote_process(c[:pid]) if c[:pid]
+              print "-"
+              i += 1
             end
-            log c("\nSSH MaxSessions: #{c maxsessions, :magenta}", :cyan)
+            log c("\n\nSSH MaxSessions: #{c maxsessions, :magenta}", :cyan)
             log "This value determines how many sessions we can multiplex over a single TCP connection."
             log "Currently, DbSucker can only utilize one connection, thus this value defines the maxmium concurrency."
             log "If you get errors you can either"
