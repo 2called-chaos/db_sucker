@@ -19,7 +19,7 @@ This tool is meant for pulling live data into your development environment. **It
 * independent parallel dump / download / import cycle for each table
 * verifies file integrity via SHA
 * flashy and colorful curses based interface with keyboard shortcuts
-* more status indications than you would ever want (even more if the remote has a somewhat recent `pv` (pipeviewer) installed)
+* more status indications than you would ever want (even more if the remote has `pv` (pipeviewer) >= 1.3.8 installed)
 * limit concurrency of certain type of tasks (e.g. limit downloads, imports, etc.)
 * uses more threads than any application should ever use (seriously it's a nightmare)
 
@@ -32,7 +32,7 @@ Currently `db_sucker` only handles the following data-flow constellation:
 
 On the local side you will need:
   - unixoid OS
-  - Ruby (>= 2.0, != 2.3.1 see gotchas)
+  - Ruby (>= 2.0, != 2.3.0 see [Caveats](#caveats---bugs))
   - mysql2 gem
   - MySQL client (`mysql` command will be used for importing)
 
@@ -42,6 +42,7 @@ On the remote side you will need:
   - any folder with write permissions (for the temporary dumps)
   - mysqldump executable
   - MySQL credentials :)
+  - Optional: Install "pv" aka pipeviewer with a version >= 1.3.8 for progress displays on remote tasks
 
 
 ## Installation
@@ -50,9 +51,13 @@ Simple as:
 
     $ gem install db_sucker
 
-At the moment you are advised to adjust the MaxSessions limit on your remote SSH server if you run into issues, see Caveats.
+You will need mysql2 as well (it's not a dependency as we might support other DBMS in the future):
 
-You will also need at least one configuration, see Configuration.
+    $ gem install mysql2
+
+At the moment you are advised to adjust the MaxSessions limit on your remote SSH server if you run into issues, see [Caveats](#caveats---bugs).
+
+You will also need at least one configuration, see [Configuration](#configuration-for-sucking---yaml-format).
 
 
 ## Usage
@@ -130,7 +135,7 @@ DbSucker has a lot of settings and other mechanisms which you can tweak and util
 
 ## Deferred import
 
-Tables with an uncompressed filesize of over 50MB will be queued up for import. Files smaller than 50MB will be imported concurrently with other tables. When all those have finished the large ones will import one after another. You can skip this behaviour with the `-n` resp. `--no-deffer` option. The threshold is changeable in your `config.rb`, see Configuration.
+Tables with an uncompressed filesize of over 50MB will be queued up for import. Files smaller than 50MB will be imported concurrently with other tables. When all those have finished the large ones will import one after another. You can skip this behaviour with the `-n` resp. `--no-deffer` option. The threshold is changeable in your `config.rb`, see [Configuration](#configuration-application---ruby-format).
 
 
 ## Importer
@@ -170,7 +175,7 @@ Under certain conditions the program might softlock when the remote unexpectedly
 If you get warnings that SSH errors occured (and most likely tasks fail), please do any of the following to prevent the issue:
 
   * Raise the MaxSession setting on the remote SSHd server if you can (recommended)
-  * Lower the amount of slots for concurrent downloads (see Configuration)
+  * Lower the amount of slots for concurrent downloads (see [Configuration](#configuration-application---ruby-format))
   * Lower the amount of consumers (not recommended, use slots instead)
 
 You can run basic SSH diagnosis tests with `db_sucker <config_identifier> -a sshdiag`.
