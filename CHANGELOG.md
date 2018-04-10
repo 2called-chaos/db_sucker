@@ -1,3 +1,34 @@
+## 3.1.0
+
+### Fixes
+
+* Prevent app to run out of consumers when tasks are waiting for defer ready
+* Prevent IO errors on Ruby < 2.3 in uncompress
+* Prevent racing conditions in SSH diagnose task
+* Minor fixes
+
+-------------------
+
+## 3.0.3
+
+* no changes, fixed my tag screwup
+
+-------------------
+
+## 3.0.2
+
+* no changes, github tags can't be altered, I screwed up
+
+-------------------
+
+## 3.0.1
+
+### Fixes
+
+* hotfix for 3.0.0 release
+
+-------------------
+
 ## 3.0.0
 
 ### Updates
