@@ -242,8 +242,24 @@ module DbSucker
         @threads.each{|t| t[:start] = true; t.signal }
 
         # master thread (control)
+        additionals = 0
+        Thread.current[:summon_workers] = 0
         while @threads.any?(&:alive?)
           _control_thread
+          Thread.current.sync do
+            Thread.current[:summon_workers].times do
+              app.debug "Spawned additional worker due to deferred import to prevent softlocks"
+              @threads << app.spawn_thread(:sklaventreiber_worker) {|thr|
+                begin
+                  additionals += 1
+                  thr[:managed_worker] = cnum + additionals
+                  _queueoff
+                rescue Interrupt
+                end
+              }
+            end
+            Thread.current[:summon_workers] = 0
+          end
           Thread.current.wait(0.1)
         end
         @threads.each(&:join)

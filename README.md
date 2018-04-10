@@ -160,7 +160,6 @@ Currently there is only the "binary" importer which will use the mysql client bi
 ### General
 
 * Ruby 2.3.0 has a bug that might segfault your ruby if some exceptions occur, this is fixed since 2.3.1 and later
-* Consumers that are waiting (e.g. deferred or slot pool) won't release their tasks, if you have to few consumers you might softlock
 
 ### SSH errors / MaxSessions
 
