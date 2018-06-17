@@ -1,3 +1,11 @@
+## 3.1.1
+
+### Fixes
+
+* Prevent a single task (running in main thread) to summon workers (and fail) when getting deferred
+
+-------------------
+
 ## 3.1.0
 
 ### Fixes
