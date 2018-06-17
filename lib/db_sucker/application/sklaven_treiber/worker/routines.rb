@@ -247,7 +247,9 @@ module DbSucker
 
           def _l_wait_for_workers
             @perform << "l_import_file_deferred"
-            Thread.main.sync { Thread.main[:summon_workers] += 1 }
+            unless Thread.current[:managed_worker] == :main
+              Thread.main.sync { Thread.main[:summon_workers] += 1 }
+            end
             wait_defer_ready
           end
 
