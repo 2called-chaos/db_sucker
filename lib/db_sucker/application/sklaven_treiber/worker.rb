@@ -4,6 +4,7 @@ module DbSucker
       class Worker
         SlotPoolNotInitializedError = Class.new(::RuntimeError)
         ChannelFailRetryError = Class.new(::RuntimeError)
+        UnknownFileTransportError = Class.new(::RuntimeError)
 
         include Core
         include Accessors

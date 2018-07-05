@@ -130,7 +130,7 @@ To get a list of available interface options and shortcuts press `?` or type `:h
 
 ## Configuration (application) - Ruby format
 
-DbSucker has a lot of settings and other mechanisms which you can tweak and utilize by creating a `~/.db_sucker/config.rb` file. You can change settings, add hooks or define own actions. For more information please take a look at the [documented example config](https://github.com/2called-chaos/db_sucker/blob/master/doc/config_example.rb) and/or [complete list of all settings](https://github.com/2called-chaos/db_sucker/blob/master/lib/db_sucker/application.rb#L58-L129).
+DbSucker has a lot of settings and other mechanisms which you can tweak and utilize by creating a `~/.db_sucker/config.rb` file. You can change settings, add hooks or define own actions. For more information please take a look at the [documented example config](https://github.com/2called-chaos/db_sucker/blob/master/doc/config_example.rb) and/or [complete list of all settings](https://github.com/2called-chaos/db_sucker/blob/master/lib/db_sucker/application.rb#L60-L134).
 
 
 ## Deferred import

@@ -77,6 +77,12 @@ module DbSucker
         status_format: :full,            # used for IO operations, can be one of: none, minimal, full
         pv_enabled: true,                # disable pv utility autodiscovery (force non-usage)
 
+        # file transport: how to copy files from the remote
+        #   ruby       Use ruby sftp-library (why slow?)
+        #   native     Shell out to native sftp command (we try our best to build the command according to your SSH settings)
+        #              NOTE: only use with non-interactive key authentication
+        file_transport: :ruby,
+
         # sklaven treiber
         window_enabled: true,            # if disabled effectively disables any status progress or window drawing
         window_draw: true,               # wether to refresh screen or not

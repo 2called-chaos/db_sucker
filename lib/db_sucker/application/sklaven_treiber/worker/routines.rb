@@ -142,11 +142,23 @@ module DbSucker
             @local_file_compressed = local_tmp_file(File.basename(@remote_file_compressed))
             @local_files_to_remove << @local_file_compressed
 
-            sftp_download(@ctn, @remote_file_compressed => @local_file_compressed) do |dl|
-              dl.status_format = app.opts[:status_format]
-              @status = [dl, "yellow"]
-              dl.abort_if { @should_cancel }
-              dl.download!
+            case app.opts[:file_transport]
+            when :ruby
+              sftp_download(@ctn, @remote_file_compressed => @local_file_compressed) do |dl|
+                dl.status_format = app.opts[:status_format]
+                @status = [dl, "yellow"]
+                dl.abort_if { @should_cancel }
+                dl.download!
+              end
+            when :native
+              sftp_native_download(@ctn, @remote_file_compressed => @local_file_compressed) do |dl|
+                dl.status_format = app.opts[:status_format]
+                @status = [dl, "yellow"]
+                dl.abort_if { @should_cancel }
+                dl.download!
+              end
+            else
+              raise UnknownFileTransportError, "Unknown file transport `#{app.opts[:file_transport]}' configured, valid are `ruby' and `native'!"
             end
           end
 

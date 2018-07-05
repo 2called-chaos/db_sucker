@@ -14,6 +14,10 @@ opts[:deferred_threshold] = 50_000_000  # 50 MB
 opts[:status_format] = :full            # used for IO operations, can be one of: none, minimal, full
 opts[:pv_enabled] = true                # disable pv utility autodiscovery (force non-usage)
 
+# Use native SFTP command for way faster transfer rates, only use with non-interactive key authentication!
+opts[:file_transport] = :ruby
+#opts[:file_transport] = :native
+
 # used to open core dumps (should be a blocking call, e.g. `subl -w' or `mate -w')
 # MUST be windowed! vim, nano, etc. will not work!
 opts[:core_dump_editor] = "subl -w"

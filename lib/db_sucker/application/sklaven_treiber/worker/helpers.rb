@@ -15,6 +15,12 @@ module DbSucker
             end
           end
 
+          def sftp_native_download *args, &block
+            IO::SftpNativeDownload.new(self, *args).tap do |op|
+              block.try(:call, op)
+            end
+          end
+
           def file_copy *args, &block
             IO::FileCopy.new(self, *args).tap do |op|
               block.try(:call, op)
