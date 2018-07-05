@@ -1,3 +1,16 @@
+## 3.2.0
+
+### Updates
+
+* Added support for native sftp command line utility (see application option `file_transport`) but it
+  only works with non-interactive key authentication.
+
+### Fixes
+
+* Prevent application from crashing when eval produces non-StandardErrors (e.g. SyntaxErrors)
+
+-------------------
+
 ## 3.1.1
 
 ### Fixes
