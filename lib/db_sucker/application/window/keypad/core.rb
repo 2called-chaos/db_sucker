@@ -72,7 +72,7 @@ module DbSucker
               begin
                 f.puts("#{evil}\n\n")
                 f.puts(app.sync{ app.instance_eval(evil) })
-              rescue StandardError => ex
+              rescue Exception => ex
                 f.puts("#{ex.class}: #{ex.message}")
                 ex.backtrace.each {|l| f.puts("  #{l}") }
               end
