@@ -37,10 +37,17 @@ module DbSucker
             else "Unhandled exception terminated application!"
           end
         ensure
+          $core_runtime_exiting = 1
           app.fire(:core_shutdown)
-          remain = Thread.list.length
-          if remain > 1
-            app.warning "#{remain} threads remain (should be 1)..."
+          remain = app.filtered_threads
+          if remain.length > 1
+            app.error "[WARN] #{remain.length} threads remain (should be 1)..."
+            remain.each do |thr|
+              app.debug "[THR] #{Thread.main == thr ? "MAIN" : "THREAD"}\t#{thr.alive? ? "ALIVE" : "DEAD"}\t#{thr.inspect}", 10
+              thr.backtrace.each do |l|
+                app.debug "[THR]\t#{l}", 20
+              end
+            end
           else
             app.debug "1 thread remains..."
           end

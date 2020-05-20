@@ -1,6 +1,12 @@
 module DbSucker
   class Application
     module Core
+      def filtered_threads
+        Thread.list.reject do |thr|
+          thr.backtrace[0]["gems/concurrent-ruby"] rescue false
+        end
+      end
+
       def sandboxed &block
         block.call
       rescue StandardError => ex
