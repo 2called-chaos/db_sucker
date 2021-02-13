@@ -12,7 +12,7 @@ module DbSucker
             end
             app.debug "IO-stats: {#{iostats * ", "}}"
           end
-          app.dump_core if Thread.list.length > 1
+          app.dump_core if app.filtered_threads.length > 1
           app.debug "RSS: #{app.human_bytes(`ps h -p #{Process.pid} -o rss`.strip.split("\n").last.to_i * 1024)}"
         end
 
