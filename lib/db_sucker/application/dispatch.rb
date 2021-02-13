@@ -140,7 +140,7 @@ module DbSucker
             }
             250.times do
               break if monitor.synchronize { stop }
-              c, r = ctn.blocking_channel_result("sleep 60", blocking: false, channel: true, use_sh: true)
+              c, r = ctn.blocking_channel_result("sleep 900", blocking: false, channel: true, use_sh: true)
               monitor.synchronize do
                 channels << c
                 print "+"
@@ -149,6 +149,7 @@ module DbSucker
             end
           ensure
             debug "Stopping sessions (#{channels.length})..."
+            puts # newline for style
             i = 1
             loop do
               break if monitor.synchronize { channels.empty? }
@@ -158,6 +159,7 @@ module DbSucker
               print "-"
               i += 1
             end
+            maxsessions = "#{maxsessions}+" if maxsessions.to_i >= 250
             log c("\n\nSSH MaxSessions: #{c maxsessions, :magenta}", :cyan)
             log "This value determines how many sessions we can multiplex over a single TCP connection."
             log "Currently, DbSucker can only utilize one connection, thus this value defines the maxmium concurrency."
