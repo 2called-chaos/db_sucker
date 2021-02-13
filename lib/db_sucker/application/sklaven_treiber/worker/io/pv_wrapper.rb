@@ -63,7 +63,7 @@ module DbSucker
               end
               killer.signal.join
             ensure
-              killer.kill
+              killer.kill.join
             end
           end
         end

@@ -101,7 +101,7 @@ module DbSucker
             i += 1
           end
         end
-        t.kill
+        t.kill.join
         puts "Thread priority: -#{m[1].abs}..+#{m[2].abs}"
       end
 
@@ -165,7 +165,7 @@ module DbSucker
             log "  * increase the SSHd `MaxSessions' setting on the remote (if you can)"
             log "  * reduce the amount of workers and/or remote slots"
             log "  * fix the mess that is this tool, visit #{c "https://github.com/2called-chaos/db_sucker", :blue}"
-            t.kill
+            t.kill.join
           end
         end
       rescue Net::SSH::AuthenticationFailed => ex
