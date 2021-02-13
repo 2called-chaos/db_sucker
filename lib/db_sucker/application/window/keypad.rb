@@ -75,6 +75,7 @@ module DbSucker
               when "p", "pause" then pause_workers(args)
               when "r", "resume" then resume_workers(args)
               when "signal-threads" then signal_threads
+              else app.print("\a")
             end
           end
         end
@@ -129,6 +130,7 @@ module DbSucker
 
         def pause_workers args
           if args[0].is_a?(String)
+            window.flashbang
             _detect_worker(args.join(" "), &:pause)
           else
             prompt!("Usage: :p(ause) <table_name|--all>", color: :yellow)
@@ -137,6 +139,7 @@ module DbSucker
 
         def resume_workers args
           if args[0].is_a?(String)
+            window.flashbang
             _detect_worker(args.join(" "), &:unpause)
           else
             prompt!("Usage: :r(esume) <table_name|--all>", color: :yellow)
@@ -145,6 +148,7 @@ module DbSucker
 
         def cancel_workers args
           if args[0].is_a?(String)
+            window.flashbang
             _detect_worker(args.join(" ")) do |wrk|
               wrk.cancel! "canceled by user"
             end
@@ -154,17 +158,24 @@ module DbSucker
         end
 
         def kill_ssh_poll
-          return if sklaventreiber.workers.select{|w| !w.done? || w.sshing }.any?
-          sklaventreiber.poll.try(:kill)
+          if sklaventreiber.workers.select{|w| !w.done? || w.sshing }.any?
+            app.print("\a")
+            prompt!("Error: cannot kill SSH poll whilst in use", color: :red)
+          else
+            window.flashbang
+            sklaventreiber.poll.try(:kill)
+          end
         end
 
         def kill_workers
+          window.flashbang
           Thread.list.each do |thr|
             thr.raise(Interrupt) if thr[:managed_worker]
           end
         end
 
         def signal_threads
+          window.flashbang
           Thread.list.each do |thr|
             thr.signal if thr.respond_to?(:signal)
           end

@@ -83,6 +83,10 @@ module DbSucker
           init_pair(Window::COLOR_GRAY, 0, -1)
         end
 
+        def flashbang
+          flash
+        end
+
         def set_cursor visibility
           curs_set(visibility)
         end
