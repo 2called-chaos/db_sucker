@@ -1,3 +1,18 @@
+## 3.2.1
+
+### Updates
+
+* Added means to signal all threads in order to wake them up as they occasionally get stuck for some reason. Press `S` or use `:signal-threads` to execute. Have yet to find the culprint :)
+* Slight UX improvements, silent commands briefly flash the screen, invalid commands ring the bell
+
+### Fixes
+
+* don't warn about orphaned concurrent-ruby threads, debug log trace of remaining threads
+* join killed threads to ensure they are dead
+* minor sshdiag fixes/enhancements
+
+-------------------
+
 ## 3.2.0
 
 ### Updates
