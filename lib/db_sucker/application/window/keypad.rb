@@ -20,12 +20,14 @@ module DbSucker
             ["T", "create core dump and open in editor"],
             ["q", "quit prompt"],
             ["Q", "same as ctrl-c"],
+            ["S", "signal/wakeup all threads"],
             [":", "main prompt"],
           ],
           main_commands: [
             [["?", %w[h elp]], [], "shows this help"],
             [[%w[q uit]], [], "quit prompt"],
             [["q!", "quit!"], [], "same as ctrl-c"],
+            [["signal-threads"], [], "signal/wakeup all threads"],
             [["kill"], [], "(dirty) interrupts all workers"],
             [["kill!"], [], "(dirty) essentially SIGKILL (no cleanup)"],
             [["dump"], [], "create and open coredump"],
@@ -50,6 +52,7 @@ module DbSucker
               when "?" then show_help
               when "q" then quit_dialog
               when "Q" then $core_runtime_exiting = 1
+              when "S" then signal_threads
               end
             end
           end
@@ -71,6 +74,7 @@ module DbSucker
               when "eval" then args.any? ? _eval(args.join(" ")) : eval_prompt
               when "p", "pause" then pause_workers(args)
               when "r", "resume" then resume_workers(args)
+              when "signal-threads" then signal_threads
             end
           end
         end
@@ -160,6 +164,12 @@ module DbSucker
           end
         end
 
+        def signal_threads
+          Thread.list.each do |thr|
+            thr.signal if thr.respond_to?(:signal)
+          end
+        end
+
         def kill_app
           exit!
         end
@@ -171,4 +181,3 @@ module DbSucker
     end
   end
 end
-
