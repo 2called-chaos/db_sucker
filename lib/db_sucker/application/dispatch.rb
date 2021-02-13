@@ -112,6 +112,10 @@ module DbSucker
         varstr = ARGV.shift
 
         configful_dispatch(idstr, varstr) do |identifier, ctn, variation, var|
+          unless ctn
+            abort "This test requires a config identifier with an SSH connection!"
+          end
+
           log c("\nPlease wait while we run some tests...\n", :blue)
           _identifier = identifier
           _ctn = ctn
