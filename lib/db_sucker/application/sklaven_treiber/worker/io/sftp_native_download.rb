@@ -51,7 +51,7 @@ module DbSucker
 
                   @state = :downloading
                   debug "Opening process `#{cmd}'"
-                  Open3.popen2e(cmd, pgroup: true) do |_stdin, _stdouterr, _thread|
+                  Open3.popen2e(cmd) do |_stdin, _stdouterr, _thread|
                     # close & exit status
                     _stdin.close_write
                     exit_status = _thread.value

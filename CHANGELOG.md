@@ -4,6 +4,10 @@
 
 * Updated net-ssh and net-sftp by major versions
 
+### Fixes
+
+* native sftp downloads will immediately stop if worker is cancelled
+
 -------------------
 
 ## 3.2.1
