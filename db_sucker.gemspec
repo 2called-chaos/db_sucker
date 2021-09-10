@@ -20,8 +20,8 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "curses", "~> 1.2"
   spec.add_dependency "activesupport", ">= 4.1"
-  spec.add_dependency "net-ssh", "~> 4.2"
-  spec.add_dependency "net-sftp", "~> 2.1"
+  spec.add_dependency "net-ssh", "~> 6.1"
+  spec.add_dependency "net-sftp", "~> 3.0"
   spec.add_development_dependency "bundler"
   spec.add_development_dependency "rake"
   spec.add_development_dependency "pry"

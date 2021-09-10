@@ -1,3 +1,11 @@
+## 4.0.0-unreleased
+
+### Updates
+
+* Updated net-ssh and net-sftp by major versions
+
+-------------------
+
 ## 3.2.1
 
 ### Updates
