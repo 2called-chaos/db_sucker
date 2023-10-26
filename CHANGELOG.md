@@ -1,8 +1,9 @@
-## 4.0.0-unreleased
+## 4.0.0
 
 ### Updates
 
-* Updated net-ssh and net-sftp by major versions
+* Updated net-ssh and net-sftp by major versions (to support OpenSSL 3)
+* Added ed25519 and bcrypt_pbkdf dependency for ed25519 key support
 
 ### Fixes
 
