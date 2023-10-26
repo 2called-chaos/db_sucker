@@ -7,6 +7,7 @@
 ### Fixes
 
 * native sftp downloads will immediately stop if worker is cancelled
+* fix copying downloaded file (`file` option / `with_copy` example)
 
 -------------------
 

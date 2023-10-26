@@ -91,12 +91,12 @@ module DbSucker
             d, dt = Time.current.strftime("%Y-%m-%d"), Time.current.strftime("%H-%M-%S")
 
             File.expand_path dstfile.dup
-              .gsub!(":combined", ":datetime_-_:table")
-              .gsub!(":datetime", "#{d}_#{dt}")
-              .gsub!(":date", d)
-              .gsub!(":time", dt)
-              .gsub!(":table", table)
-              .gsub!(":id", sklaventreiber.trxid)
+              .gsub(":combined", ":datetime_-_:table")
+              .gsub(":datetime", "#{d}_#{dt}")
+              .gsub(":date", d)
+              .gsub(":time", dt)
+              .gsub(":table", table)
+              .gsub(":id", sklaventreiber.trxid)
           end
         end
       end
